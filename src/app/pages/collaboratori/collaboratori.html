@@ -1,0 +1,122 @@
+<section class="page">
+  <header class="page-header">
+    <div>
+      <h2>Collaboratori</h2>
+      <p>Gestione dei collaboratori.</p>
+    </div>
+    <button type="button" class="btn-primary" (click)="openCreateForm()">+ Nuovo collaboratore</button>
+  </header>
+
+  <div class="kpi-grid">
+    <article class="kpi-card">
+      <span class="kpi-value">{{ totale }}</span>
+      <span class="kpi-label">Totale collaboratori</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-value">{{ attivi }}</span>
+      <span class="kpi-label">Attivi</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-value">{{ inMalattia }}</span>
+      <span class="kpi-label">In malattia</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-value">{{ cessati }}</span>
+      <span class="kpi-label">Cessati</span>
+    </article>
+  </div>
+
+  <article class="widget">
+    <table>
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Ruolo</th>
+          <th>Telefono</th>
+          <th>Email</th>
+          <th>Stato</th>
+          <th>Assunzione</th>
+          <th>Scadenza patente</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (collaboratore of collaboratori(); track collaboratore.id) {
+          <tr>
+            <td>{{ collaboratore.nome }} {{ collaboratore.cognome }}</td>
+            <td>{{ collaboratore.ruolo }}</td>
+            <td>{{ collaboratore.telefono }}</td>
+            <td>{{ collaboratore.email }}</td>
+            <td>
+              <span
+                class="status-badge"
+                [class.status-attivo]="collaboratore.stato === 'Attivo'"
+                [class.status-malattia]="collaboratore.stato === 'In malattia'"
+                [class.status-cessato]="collaboratore.stato === 'Cessato'"
+              >
+                {{ collaboratore.stato }}
+              </span>
+            </td>
+            <td>{{ collaboratore.dataAssunzione }}</td>
+            <td>{{ collaboratore.scadenzaPatente }}</td>
+            <td>
+              <div class="actions">
+                <button type="button" class="btn-icon" (click)="openEditForm(collaboratore)" aria-label="Modifica">✎</button>
+                <button type="button" class="btn-icon danger" (click)="deleteCollaboratore(collaboratore.id)" aria-label="Elimina">🗑</button>
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="8" class="empty-row">Nessun collaboratore registrato.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </article>
+
+  @if (showForm()) {
+    <div class="modal-backdrop" (click)="closeForm()">
+      <form class="modal-card" (click)="$event.stopPropagation()" (ngSubmit)="saveCollaboratore()">
+        <h3>{{ editingId() !== null ? 'Modifica collaboratore' : 'Nuovo collaboratore' }}</h3>
+
+        <label for="nome">Nome</label>
+        <input id="nome" name="nome" type="text" [(ngModel)]="form.nome" required />
+
+        <label for="cognome">Cognome</label>
+        <input id="cognome" name="cognome" type="text" [(ngModel)]="form.cognome" required />
+
+        <label for="ruolo">Ruolo</label>
+        <select id="ruolo" name="ruolo" [(ngModel)]="form.ruolo">
+          @for (ruolo of ruoli; track ruolo) {
+            <option [value]="ruolo">{{ ruolo }}</option>
+          }
+        </select>
+
+        <label for="telefono">Telefono</label>
+        <input id="telefono" name="telefono" type="text" [(ngModel)]="form.telefono" />
+
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" [(ngModel)]="form.email" />
+
+        <label for="stato">Stato</label>
+        <select id="stato" name="stato" [(ngModel)]="form.stato">
+          @for (stato of statiCollaboratore; track stato) {
+            <option [value]="stato">{{ stato }}</option>
+          }
+        </select>
+
+        <label for="dataAssunzione">Data assunzione</label>
+        <input id="dataAssunzione" name="dataAssunzione" type="text" placeholder="gg/mm/aaaa" [(ngModel)]="form.dataAssunzione" />
+
+        <label for="scadenzaPatente">Scadenza patente</label>
+        <input id="scadenzaPatente" name="scadenzaPatente" type="text" placeholder="gg/mm/aaaa" [(ngModel)]="form.scadenzaPatente" />
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" (click)="closeForm()">Annulla</button>
+          <button type="submit" class="btn-primary">Salva</button>
+        </div>
+      </form>
+    </div>
+  }
+</section>

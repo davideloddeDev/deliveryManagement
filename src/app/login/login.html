@@ -1,0 +1,26 @@
+<div class="login-page">
+  <section class="brand-panel">
+    <img class="logo" src="logo.svg" alt="futureDelivery" />
+    <h1>futureDelivery</h1>
+    <p>Gestionale operativo per la gestione delle consegne</p>
+  </section>
+
+  <section class="form-panel">
+    <form class="login-card" (ngSubmit)="onSubmit()">
+      <h2>Accedi</h2>
+      <p class="subtitle">Inserisci le tue credenziali per continuare</p>
+
+      <label for="username">Utente</label>
+      <input id="username" name="username" type="text" [(ngModel)]="username" autocomplete="username" placeholder="Inserisci il nome utente" />
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" [(ngModel)]="password" autocomplete="current-password" placeholder="Inserisci la password" />
+
+      @if (error()) {
+        <p class="error">Credenziali non valide.</p>
+      }
+
+      <button type="submit">Accedi</button>
+    </form>
+  </section>
+</div>

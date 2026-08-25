@@ -1,0 +1,151 @@
+<section class="page">
+  <header class="page-header">
+    <div>
+      <h2>Mezzi</h2>
+      <p>Gestione del parco mezzi.</p>
+    </div>
+    <button type="button" class="btn-primary" (click)="openCreateForm()">+ Nuovo mezzo</button>
+  </header>
+
+  <div class="kpi-grid">
+    <article class="kpi-card">
+      <span class="kpi-value">{{ totale }}</span>
+      <span class="kpi-label">Totale mezzi</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-value">{{ attivi }}</span>
+      <span class="kpi-label">Attivi</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-value">{{ inManutenzione }}</span>
+      <span class="kpi-label">In manutenzione</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-value">{{ fuoriServizio }}</span>
+      <span class="kpi-label">Fuori servizio</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-value">{{ assicurazioniInScadenza }}</span>
+      <span class="kpi-label">Assicurazioni in scadenza/scadute</span>
+    </article>
+  </div>
+
+  <article class="widget">
+    <table>
+      <thead>
+        <tr>
+          <th>Targa</th>
+          <th>Modello</th>
+          <th>Tipo</th>
+          <th>Stato</th>
+          <th>Km percorsi</th>
+          <th>Ultima manutenzione</th>
+          <th>Assicurazione</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (mezzo of mezzi(); track mezzo.id) {
+          <tr>
+            <td>{{ mezzo.targa }}</td>
+            <td>{{ mezzo.modello }}</td>
+            <td>{{ mezzo.tipo }}</td>
+            <td>
+              <span
+                class="status-badge"
+                [class.status-attivo]="mezzo.stato === 'Attivo'"
+                [class.status-manutenzione]="mezzo.stato === 'In manutenzione'"
+                [class.status-fuori]="mezzo.stato === 'Fuori servizio'"
+              >
+                {{ mezzo.stato }}
+              </span>
+            </td>
+            <td>{{ mezzo.km | number: '1.0-0' }} km</td>
+            <td>{{ mezzo.ultimaManutenzione }}</td>
+            <td>
+              <div class="insurance-cell">
+                <span class="insurance-company">{{ mezzo.compagniaAssicurativa }}</span>
+                <span class="insurance-policy">{{ mezzo.numeroPolizza }}</span>
+                <span
+                  class="status-badge"
+                  [class.status-attivo]="statoAssicurazione(mezzo.scadenzaAssicurazione) === 'Valida'"
+                  [class.status-manutenzione]="statoAssicurazione(mezzo.scadenzaAssicurazione) === 'In scadenza'"
+                  [class.status-fuori]="statoAssicurazione(mezzo.scadenzaAssicurazione) === 'Scaduta'"
+                >
+                  {{ statoAssicurazione(mezzo.scadenzaAssicurazione) }} · {{ mezzo.scadenzaAssicurazione }}
+                </span>
+                @if (statoAssicurazione(mezzo.scadenzaAssicurazione) !== 'Valida') {
+                  @if (!mezzo.pagamentoAssicurazioneAutorizzato) {
+                    <button type="button" class="btn-pay" (click)="autorizzaPagamentoAssicurazione(mezzo)">
+                      Autorizza pagamento
+                    </button>
+                  } @else {
+                    <span class="pay-confirmed">✓ Pagamento autorizzato</span>
+                  }
+                }
+              </div>
+            </td>
+            <td>
+              <div class="actions">
+                <button type="button" class="btn-icon" (click)="openEditForm(mezzo)" aria-label="Modifica">✎</button>
+                <button type="button" class="btn-icon danger" (click)="deleteMezzo(mezzo.id)" aria-label="Elimina">🗑</button>
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="8" class="empty-row">Nessun mezzo registrato.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </article>
+
+  @if (showForm()) {
+    <div class="modal-backdrop" (click)="closeForm()">
+      <form class="modal-card" (click)="$event.stopPropagation()" (ngSubmit)="saveMezzo()">
+        <h3>{{ editingId() !== null ? 'Modifica mezzo' : 'Nuovo mezzo' }}</h3>
+
+        <label for="targa">Targa</label>
+        <input id="targa" name="targa" type="text" [(ngModel)]="form.targa" required />
+
+        <label for="modello">Modello</label>
+        <input id="modello" name="modello" type="text" [(ngModel)]="form.modello" required />
+
+        <label for="tipo">Tipo</label>
+        <select id="tipo" name="tipo" [(ngModel)]="form.tipo">
+          @for (tipo of tipiMezzo; track tipo) {
+            <option [value]="tipo">{{ tipo }}</option>
+          }
+        </select>
+
+        <label for="stato">Stato</label>
+        <select id="stato" name="stato" [(ngModel)]="form.stato">
+          @for (stato of statiMezzo; track stato) {
+            <option [value]="stato">{{ stato }}</option>
+          }
+        </select>
+
+        <label for="km">Km percorsi</label>
+        <input id="km" name="km" type="number" min="0" [(ngModel)]="form.km" />
+
+        <label for="ultimaManutenzione">Ultima manutenzione</label>
+        <input id="ultimaManutenzione" name="ultimaManutenzione" type="text" placeholder="gg/mm/aaaa" [(ngModel)]="form.ultimaManutenzione" />
+
+        <label for="compagniaAssicurativa">Compagnia assicurativa</label>
+        <input id="compagniaAssicurativa" name="compagniaAssicurativa" type="text" [(ngModel)]="form.compagniaAssicurativa" />
+
+        <label for="numeroPolizza">Numero polizza</label>
+        <input id="numeroPolizza" name="numeroPolizza" type="text" [(ngModel)]="form.numeroPolizza" />
+
+        <label for="scadenzaAssicurazione">Scadenza assicurazione</label>
+        <input id="scadenzaAssicurazione" name="scadenzaAssicurazione" type="text" placeholder="gg/mm/aaaa" [(ngModel)]="form.scadenzaAssicurazione" />
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" (click)="closeForm()">Annulla</button>
+          <button type="submit" class="btn-primary">Salva</button>
+        </div>
+      </form>
+    </div>
+  }
+</section>

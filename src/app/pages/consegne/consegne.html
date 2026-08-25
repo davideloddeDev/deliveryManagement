@@ -1,0 +1,131 @@
+<section class="page">
+  <header class="page-header">
+    <div>
+      <h2>Consegne</h2>
+      <p>Gestione delle consegne.</p>
+    </div>
+    <button type="button" class="btn-primary" (click)="openCreateForm()">+ Nuova consegna</button>
+  </header>
+
+  <div class="kpi-grid">
+    <article class="kpi-card">
+      <span class="kpi-value">{{ totale }}</span>
+      <span class="kpi-label">Totale consegne</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-value">{{ inAttesa }}</span>
+      <span class="kpi-label">In attesa</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-value">{{ inTransito }}</span>
+      <span class="kpi-label">In transito</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-value">{{ consegnate }}</span>
+      <span class="kpi-label">Consegnate</span>
+    </article>
+  </div>
+
+  <article class="widget">
+    <div class="search-bar">
+      <input
+        type="text"
+        placeholder="Cerca per cliente, targa o autista..."
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        name="searchTerm"
+      />
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Codice</th>
+          <th>Cliente</th>
+          <th>Indirizzo</th>
+          <th>Targa</th>
+          <th>Autista</th>
+          <th>Stato</th>
+          <th>Data</th>
+          <th>Importo</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (consegna of consegneFiltrate; track consegna.id) {
+          <tr>
+            <td>{{ consegna.codice }}</td>
+            <td>{{ consegna.cliente }}</td>
+            <td>{{ consegna.indirizzo }}</td>
+            <td>{{ consegna.targaMezzo }}</td>
+            <td>{{ consegna.autista }}</td>
+            <td>
+              <span
+                class="status-badge"
+                [class.status-attesa]="consegna.stato === 'In attesa'"
+                [class.status-transito]="consegna.stato === 'In transito'"
+                [class.status-consegnato]="consegna.stato === 'Consegnato'"
+                [class.status-annullata]="consegna.stato === 'Annullata'"
+              >
+                {{ consegna.stato }}
+              </span>
+            </td>
+            <td>{{ consegna.dataConsegna }}</td>
+            <td>€ {{ consegna.importo | number: '1.0-2' }}</td>
+            <td>
+              <div class="actions">
+                <button type="button" class="btn-icon" (click)="openEditForm(consegna)" aria-label="Modifica">✎</button>
+                <button type="button" class="btn-icon danger" (click)="deleteConsegna(consegna.id)" aria-label="Elimina">🗑</button>
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="9" class="empty-row">Nessuna consegna trovata.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </article>
+
+  @if (showForm()) {
+    <div class="modal-backdrop" (click)="closeForm()">
+      <form class="modal-card" (click)="$event.stopPropagation()" (ngSubmit)="saveConsegna()">
+        <h3>{{ editingId() !== null ? 'Modifica consegna' : 'Nuova consegna' }}</h3>
+
+        <label for="codice">Codice</label>
+        <input id="codice" name="codice" type="text" [(ngModel)]="form.codice" required />
+
+        <label for="cliente">Cliente</label>
+        <input id="cliente" name="cliente" type="text" [(ngModel)]="form.cliente" required />
+
+        <label for="indirizzo">Indirizzo</label>
+        <input id="indirizzo" name="indirizzo" type="text" [(ngModel)]="form.indirizzo" />
+
+        <label for="mezzo">Targa mezzo</label>
+        <input id="mezzo" name="mezzo" type="text" [(ngModel)]="form.targaMezzo" />
+
+        <label for="autista">Autista</label>
+        <input id="autista" name="autista" type="text" [(ngModel)]="form.autista" />
+
+        <label for="stato">Stato</label>
+        <select id="stato" name="stato" [(ngModel)]="form.stato">
+          @for (stato of statiConsegna; track stato) {
+            <option [value]="stato">{{ stato }}</option>
+          }
+        </select>
+
+        <label for="dataConsegna">Data e ora</label>
+        <input id="dataConsegna" name="dataConsegna" type="text" placeholder="gg/mm/aaaa hh:mm" [(ngModel)]="form.dataConsegna" />
+
+        <label for="importo">Importo (€)</label>
+        <input id="importo" name="importo" type="number" min="0" step="0.01" [(ngModel)]="form.importo" />
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" (click)="closeForm()">Annulla</button>
+          <button type="submit" class="btn-primary">Salva</button>
+        </div>
+      </form>
+    </div>
+  }
+</section>

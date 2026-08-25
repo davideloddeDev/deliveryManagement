@@ -1,0 +1,117 @@
+<section class="page">
+  <header class="page-header">
+    <div>
+      <h2>Pagamenti</h2>
+      <p>Gestione dei pagamenti.</p>
+    </div>
+    <button type="button" class="btn-primary" (click)="openCreateForm()">+ Nuovo pagamento</button>
+  </header>
+
+  <div class="tabs">
+    @for (tab of tabs; track tab) {
+      <button type="button" class="tab" [class.active]="activeTab() === tab" (click)="selectTab(tab)">
+        {{ tab }}
+      </button>
+    }
+  </div>
+
+  <div class="kpi-grid">
+    <article class="kpi-card">
+      <span class="kpi-value">{{ pagamentiFiltrati.length }}</span>
+      <span class="kpi-label">Totale voci</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-value">{{ totalePagati }}</span>
+      <span class="kpi-label">Pagati</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-value">{{ totaleDaPagare }}</span>
+      <span class="kpi-label">Da pagare</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-value">€ {{ importoDaPagare | number: '1.0-2' }}</span>
+      <span class="kpi-label">Importo da pagare</span>
+    </article>
+  </div>
+
+  <article class="widget">
+    <table>
+      <thead>
+        <tr>
+          <th>Riferimento</th>
+          <th>Descrizione</th>
+          <th>Importo</th>
+          <th>Stato</th>
+          <th>Data</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (pagamento of pagamentiFiltrati; track pagamento.id) {
+          <tr>
+            <td>{{ pagamento.riferimento }}</td>
+            <td>{{ pagamento.descrizione }}</td>
+            <td>€ {{ pagamento.importo | number: '1.0-2' }}</td>
+            <td>
+              <span class="status-badge" [class.status-pagato]="pagamento.stato === 'Pagato'" [class.status-da-pagare]="pagamento.stato === 'Da pagare'">
+                {{ pagamento.stato }}
+              </span>
+            </td>
+            <td>{{ pagamento.data }}</td>
+            <td>
+              <div class="actions">
+                @if (pagamento.stato === 'Da pagare') {
+                  <button type="button" class="btn-icon" (click)="segnaComePagato(pagamento)" aria-label="Segna come pagato">✓</button>
+                }
+                <button type="button" class="btn-icon" (click)="openEditForm(pagamento)" aria-label="Modifica">✎</button>
+                <button type="button" class="btn-icon danger" (click)="deletePagamento(pagamento.id)" aria-label="Elimina">🗑</button>
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6" class="empty-row">Nessun pagamento in questa categoria.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </article>
+
+  @if (showForm()) {
+    <div class="modal-backdrop" (click)="closeForm()">
+      <form class="modal-card" (click)="$event.stopPropagation()" (ngSubmit)="savePagamento()">
+        <h3>{{ editingId() !== null ? 'Modifica pagamento' : 'Nuovo pagamento' }}</h3>
+
+        <label for="tipo">Tipo</label>
+        <select id="tipo" name="tipo" [(ngModel)]="form.tipo">
+          @for (tab of tabs; track tab) {
+            <option [value]="tab">{{ tab }}</option>
+          }
+        </select>
+
+        <label for="riferimento">Riferimento</label>
+        <input id="riferimento" name="riferimento" type="text" [(ngModel)]="form.riferimento" required />
+
+        <label for="descrizione">Descrizione</label>
+        <input id="descrizione" name="descrizione" type="text" [(ngModel)]="form.descrizione" required />
+
+        <label for="importo">Importo (€)</label>
+        <input id="importo" name="importo" type="number" min="0" step="0.01" [(ngModel)]="form.importo" />
+
+        <label for="stato">Stato</label>
+        <select id="stato" name="stato" [(ngModel)]="form.stato">
+          <option value="Da pagare">Da pagare</option>
+          <option value="Pagato">Pagato</option>
+        </select>
+
+        <label for="data">Data</label>
+        <input id="data" name="data" type="text" placeholder="gg/mm/aaaa" [(ngModel)]="form.data" />
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" (click)="closeForm()">Annulla</button>
+          <button type="submit" class="btn-primary">Salva</button>
+        </div>
+      </form>
+    </div>
+  }
+</section>
