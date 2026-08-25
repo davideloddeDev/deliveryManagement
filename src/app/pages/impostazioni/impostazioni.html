@@ -1,4 +1,158 @@
 <section class="page">
-  <h2>Impostazioni</h2>
-  <p>Configurazione dell'applicazione.</p>
+  <header class="page-header">
+    <div>
+      <h2>Impostazioni</h2>
+      <p>Gestione configurazioni e preferenze del sistema.</p>
+    </div>
+  </header>
+
+  <div class="kpi-grid">
+    <article class="kpi-card">
+      <span class="kpi-value">{{ enabledSettings }}</span>
+      <span class="kpi-label">Funzioni attive</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-value">{{ totalSettings }}</span>
+      <span class="kpi-label">Impostazioni totali</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-value">{{ accessiAbilitati }}</span>
+      <span class="kpi-label">Accessi trasporto</span>
+    </article>
+  </div>
+
+  <div class="settings-tabs" role="tablist" aria-label="Sezioni impostazioni">
+    @for (tab of tabs; track tab.key) {
+      <button
+        type="button"
+        class="tab"
+        [class.active]="activeTab() === tab.key"
+        role="tab"
+        [attr.aria-selected]="activeTab() === tab.key"
+        (click)="selectTab(tab.key)"
+      >
+        {{ tab.label }}
+      </button>
+    }
+  </div>
+
+  @if (activeTab() === 'generale') {
+    <article class="widget">
+      <div class="widget-header">
+        <h3>Profilo aziendale</h3>
+        <button type="button" class="btn-primary">Salva</button>
+      </div>
+
+      <form class="company-form">
+        <label>
+          Nome azienda
+          <input type="text" [ngModel]="companyProfile.nome" name="nomeAzienda" />
+        </label>
+
+        <label>
+          Indirizzo
+          <input type="text" [ngModel]="companyProfile.indirizzo" name="indirizzo" />
+        </label>
+
+        <div class="form-row">
+          <label>
+            Email aziendale
+            <input type="email" [ngModel]="companyProfile.email" name="email" />
+          </label>
+          <label>
+            Telefono
+            <input type="text" [ngModel]="companyProfile.telefono" name="telefono" />
+          </label>
+        </div>
+
+        <label>
+          Partita IVA
+          <input type="text" [ngModel]="companyProfile.partitaIva" name="partitaIva" />
+        </label>
+      </form>
+    </article>
+  }
+
+  @if (activeTab() === 'sistema') {
+    <article class="widget">
+      <div class="widget-header">
+        <h3>Preferenze sistema</h3>
+      </div>
+
+      <div class="settings-list">
+        @for (setting of settings(); track setting.key) {
+          <div class="setting-row">
+            <div class="setting-copy">
+              <h4>{{ setting.label }}</h4>
+              <p>{{ setting.description }}</p>
+            </div>
+
+            <label class="switch" [attr.aria-label]="setting.label">
+              <input type="checkbox" [checked]="setting.enabled" (change)="toggleSetting(setting.key)" />
+              <span class="slider"></span>
+            </label>
+          </div>
+        }
+      </div>
+    </article>
+  }
+
+  @if (activeTab() === 'licenza') {
+    <article class="widget">
+      <div class="widget-header">
+        <h3>Licenza software</h3>
+        <span class="status-badge" [class.status-attiva]="statoLicenza === 'Attiva'" [class.status-warning]="statoLicenza === 'In scadenza'" [class.status-danger]="statoLicenza === 'Scaduta'">
+          {{ statoLicenza }}
+        </span>
+      </div>
+
+      <div class="license-grid">
+        <div class="license-summary">
+          <p class="label">Scadenza licenza</p>
+          <strong>{{ licenza.scadenza }}</strong>
+          <p class="muted">
+            {{ licenza.rinnovoAutomatico ? 'Il sistema rinnova automaticamente la licenza prima della scadenza.' : 'Al termine della licenza il servizio verrà interrotto.' }}
+          </p>
+        </div>
+
+        <div class="license-actions">
+          <p class="label">Azione alla scadenza</p>
+
+          <label class="option-row">
+            <input type="radio" name="licenseAction" [value]="true" [(ngModel)]="licenza.rinnovoAutomatico" />
+            <span>Rinnovo automatico</span>
+          </label>
+
+          <label class="option-row">
+            <input type="radio" name="licenseAction" [value]="false" [(ngModel)]="licenza.rinnovoAutomatico" />
+            <span>Interrompi servizio</span>
+          </label>
+        </div>
+      </div>
+    </article>
+  }
+
+  @if (activeTab() === 'accessi') {
+    <article class="widget">
+      <div class="widget-header">
+        <h3>Accessi FutureDeliveryTrasport</h3>
+      </div>
+
+      <div class="access-list">
+        @for (collaboratore of accessiCollaboratori(); track collaboratore.id) {
+          <div class="access-row">
+            <div class="access-user">
+              <strong>{{ collaboratore.nome }} {{ collaboratore.cognome }}</strong>
+              <span>{{ collaboratore.ruolo }}</span>
+            </div>
+
+            <label class="switch" [attr.aria-label]="'Abilita accesso per ' + collaboratore.nome + ' ' + collaboratore.cognome">
+              <input type="checkbox" [checked]="collaboratore.enabled" (change)="toggleAccesso(collaboratore.id)" />
+              <span class="slider"></span>
+            </label>
+          </div>
+        }
+      </div>
+    </article>
+  }
 </section>

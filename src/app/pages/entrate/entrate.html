@@ -1,4 +1,117 @@
 <section class="page">
-  <h2>Entrate</h2>
-  <p>Monitoraggio delle entrate.</p>
+  <header class="page-header">
+    <div>
+      <h2>Entrate</h2>
+      <p>Monitoraggio delle entrate e dei pagamenti ricevuti.</p>
+    </div>
+    <button type="button" class="btn-primary" (click)="openCreateForm()">+ Nuova entrata</button>
+  </header>
+
+  <div class="tabs">
+    @for (tab of tabs; track tab) {
+      <button type="button" class="tab" [class.active]="activeTab() === tab" (click)="selectTab(tab)">
+        {{ tab }}
+      </button>
+    }
+  </div>
+
+  <div class="kpi-grid">
+    <article class="kpi-card">
+      <span class="kpi-value">{{ entrateFiltrate.length }}</span>
+      <span class="kpi-label">Totale voci</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-value">{{ incassate }}</span>
+      <span class="kpi-label">Incassate</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-value">{{ inAttesa }}</span>
+      <span class="kpi-label">In attesa</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-value">€ {{ importoInAttesa | number: '1.0-2' }}</span>
+      <span class="kpi-label">Importo da incassare</span>
+    </article>
+  </div>
+
+  <article class="widget">
+    <table>
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th>Descrizione</th>
+          <th>Importo</th>
+          <th>Stato</th>
+          <th>Data</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (entrata of entrateFiltrate; track entrata.id) {
+          <tr>
+            <td>{{ entrata.cliente }}</td>
+            <td>{{ entrata.descrizione }}</td>
+            <td>€ {{ entrata.importo | number: '1.0-2' }}</td>
+            <td>
+              <span class="status-badge" [class.status-incassato]="entrata.stato === 'Incassato'" [class.status-in-attesa]="entrata.stato === 'In attesa'">
+                {{ entrata.stato }}
+              </span>
+            </td>
+            <td>{{ entrata.data }}</td>
+            <td>
+              <div class="actions">
+                @if (entrata.stato === 'In attesa') {
+                  <button type="button" class="btn-icon" (click)="segnaComeIncassato(entrata)" aria-label="Segna come incassato">✓</button>
+                }
+                <button type="button" class="btn-icon" (click)="openEditForm(entrata)" aria-label="Modifica">✎</button>
+                <button type="button" class="btn-icon danger" (click)="deleteEntrata(entrata.id)" aria-label="Elimina">🗑</button>
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6" class="empty-row">Nessuna entrata in questa categoria.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </article>
+
+  @if (showForm()) {
+    <div class="modal-backdrop" (click)="closeForm()">
+      <form class="modal-card" (click)="$event.stopPropagation()" (ngSubmit)="saveEntrata()">
+        <h3>{{ editingId() !== null ? 'Modifica entrata' : 'Nuova entrata' }}</h3>
+
+        <label for="tipo">Tipo</label>
+        <select id="tipo" name="tipo" [(ngModel)]="form.tipo">
+          @for (tab of tabs; track tab) {
+            <option [value]="tab">{{ tab }}</option>
+          }
+        </select>
+
+        <label for="cliente">Cliente</label>
+        <input id="cliente" name="cliente" type="text" [(ngModel)]="form.cliente" required />
+
+        <label for="descrizione">Descrizione</label>
+        <input id="descrizione" name="descrizione" type="text" [(ngModel)]="form.descrizione" required />
+
+        <label for="importo">Importo (€)</label>
+        <input id="importo" name="importo" type="number" min="0" step="0.01" [(ngModel)]="form.importo" />
+
+        <label for="stato">Stato</label>
+        <select id="stato" name="stato" [(ngModel)]="form.stato">
+          <option value="In attesa">In attesa</option>
+          <option value="Incassato">Incassato</option>
+        </select>
+
+        <label for="data">Data</label>
+        <input id="data" name="data" type="text" placeholder="gg/mm/aaaa" [(ngModel)]="form.data" />
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" (click)="closeForm()">Annulla</button>
+          <button type="submit" class="btn-primary">Salva</button>
+        </div>
+      </form>
+    </div>
+  }
 </section>
