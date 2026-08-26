@@ -95,6 +95,50 @@
   }
 }
 
+.telemetria-header {
+  align-items: flex-start;
+
+  p {
+    margin-top: 0.3rem;
+    font-size: 0.8rem;
+  }
+}
+
+.eyebrow { margin-bottom: 0.35rem; color: #1570ef; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.pro-badge { display: inline-flex; align-items: center; padding: 0.25rem 0.55rem; border-radius: 999px; background: #101828; color: #fff; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; }
+
+.vehicle-selector {
+  max-width: 360px;
+  margin-bottom: 1.1rem;
+
+  select { width: 100%; padding: 0.6rem 0.7rem; border: 1px solid #d0d5dd; border-radius: 6px; background: #fff; color: #101828; font-size: 0.85rem; }
+}
+
+.telemetry-layout { display: grid; grid-template-columns: minmax(280px, 1.15fr) minmax(280px, 1fr); gap: 1.25rem; }
+.vehicle-map { position: relative; min-height: 300px; overflow: hidden; border: 1px solid #b8d4c4; border-radius: 8px; background: #dcefe4; }
+.map-grid { position: absolute; inset: 0; opacity: 0.55; background-image: linear-gradient(30deg, transparent 47%, #b8d4c4 48%, #b8d4c4 50%, transparent 51%), linear-gradient(120deg, transparent 47%, #b8d4c4 48%, #b8d4c4 50%, transparent 51%); background-size: 72px 72px; }
+.map-road { position: absolute; height: 14px; border: 3px solid #fff; border-radius: 999px; background: #9fb5bf; transform: rotate(-28deg); }
+.map-road-one { width: 125%; top: 42%; left: -12%; }
+.map-road-two { width: 90%; top: 58%; left: 10%; transform: rotate(54deg); }
+.map-marker { position: absolute; top: 43%; left: 52%; display: grid; width: 38px; height: 38px; place-items: center; border: 4px solid #fff; border-radius: 50% 50% 50% 0; background: #1570ef; box-shadow: 0 4px 12px rgba(16, 24, 40, 0.22); transform: rotate(-45deg); }
+.map-marker span { width: 10px; height: 10px; border-radius: 50%; background: #fff; }
+.map-label { position: absolute; right: 0.8rem; bottom: 0.8rem; max-width: calc(100% - 1.6rem); padding: 0.45rem 0.6rem; border-radius: 5px; background: rgba(255, 255, 255, 0.9); color: #344054; font-size: 0.75rem; font-weight: 600; }
+.telemetry-details { display: flex; flex-direction: column; gap: 1rem; }
+.location-summary { display: flex; align-items: flex-start; gap: 0.6rem; }
+.location-summary div { display: flex; flex-direction: column; gap: 0.2rem; }
+.location-summary strong { color: #101828; font-size: 0.9rem; }
+.location-summary span:not(.live-dot) { color: #667085; font-size: 0.75rem; }
+.live-dot { width: 9px; height: 9px; margin-top: 0.25rem; border-radius: 50%; background: #12b76a; box-shadow: 0 0 0 4px rgba(18, 183, 106, 0.12); }
+.telemetry-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; }
+.telemetry-stat { display: flex; flex-direction: column; gap: 0.3rem; padding: 0.75rem; border: 1px solid #eaecf0; border-radius: 8px; background: #f9fafb; }
+.telemetry-stat span, .telemetry-stat small { color: #667085; font-size: 0.7rem; }
+.telemetry-stat strong { color: #101828; font-size: 0.95rem; }
+.featured-stat { border-color: #b2ddff; background: #eff8ff; }
+.telemetry-update { margin-top: auto; font-size: 0.72rem; }
+.pro-lock { text-align: center; }
+.pro-lock h3 { margin: 0.8rem 0 0.35rem; color: #101828; }
+.pro-lock p { max-width: 480px; margin: 0 auto 1rem; line-height: 1.5; }
+
 .company-form {
   display: grid;
   gap: 0.85rem;
@@ -324,4 +368,11 @@ input {
   input:checked + .slider::before {
     transform: translateX(20px);
   }
+}
+
+@media (max-width: 760px) {
+  .settings-tabs { overflow-x: auto; }
+  .tab { flex: 0 0 auto; }
+  .telemetry-layout { grid-template-columns: 1fr; }
+  .vehicle-map { min-height: 240px; }
 }

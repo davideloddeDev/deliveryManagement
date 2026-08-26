@@ -155,4 +155,65 @@
       </div>
     </article>
   }
+
+  @if (activeTab() === 'telemetria') {
+    @if (telemetriaProAbilitata) {
+      <article class="widget telemetria-widget">
+        <div class="widget-header telemetria-header">
+          <div>
+            <div class="eyebrow">App automotive collegata</div>
+            <h3>Telemetria mezzi</h3>
+            <p>Posizione, carico e stato operativo aggiornati dal veicolo.</p>
+          </div>
+          <span class="pro-badge">PRO</span>
+        </div>
+
+        <label class="vehicle-selector" for="mezzoTelemetria">
+          Mezzo da monitorare
+          <select id="mezzoTelemetria" [ngModel]="mezzoTelemetriaId()" (ngModelChange)="selectMezzoTelemetria($event)">
+            @for (mezzo of mezziTelemetria; track mezzo.id) {
+              <option [ngValue]="mezzo.id">{{ mezzo.targa }} · {{ mezzo.modello }}</option>
+            }
+          </select>
+        </label>
+
+        @if (telemetriaSelezionata; as telemetria) {
+          <div class="telemetry-layout">
+            <div class="vehicle-map" role="img" [attr.aria-label]="'Posizione del mezzo: ' + telemetria.posizione">
+              <div class="map-grid"></div>
+              <div class="map-road map-road-one"></div>
+              <div class="map-road map-road-two"></div>
+              <div class="map-marker"><span></span></div>
+              <div class="map-label">{{ telemetria.posizione }}</div>
+            </div>
+
+            <div class="telemetry-details">
+              <div class="location-summary">
+                <span class="live-dot"></span>
+                <div>
+                  <strong>{{ telemetria.posizione }}</strong>
+                  <span>{{ telemetria.coordinate }}</span>
+                </div>
+              </div>
+              <div class="telemetry-grid">
+                <div class="telemetry-stat featured-stat"><span>Carico disponibile</span><strong>{{ telemetria.caricoDisponibile }}</strong><small>su {{ telemetria.capacitaCarico }}</small></div>
+                <div class="telemetry-stat"><span>Stato motore</span><strong>{{ telemetria.statoMotore }}</strong></div>
+                <div class="telemetry-stat"><span>Velocità</span><strong>{{ telemetria.velocita }}</strong></div>
+                <div class="telemetry-stat"><span>Temperatura vano</span><strong>{{ telemetria.temperatura }}</strong></div>
+                <div class="telemetry-stat"><span>Autonomia stimata</span><strong>{{ telemetria.autonomia }}</strong></div>
+              </div>
+              <p class="telemetry-update">Ultimo aggiornamento: {{ telemetria.ultimoAggiornamento }}</p>
+            </div>
+          </div>
+        }
+      </article>
+    } @else {
+      <article class="widget pro-lock">
+        <span class="pro-badge">PRO</span>
+        <h3>Telemetria automotive</h3>
+        <p>Attiva il piano Pro per visualizzare posizione, carico disponibile e dati operativi dei tuoi mezzi.</p>
+        <button type="button" class="btn-primary">Scopri il piano Pro</button>
+      </article>
+    }
+  }
 </section>

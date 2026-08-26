@@ -29,7 +29,20 @@ interface CollaboratoreAccesso {
   enabled: boolean;
 }
 
-type SettingsTab = 'generale' | 'sistema' | 'licenza' | 'accessi';
+interface TelemetriaMezzo {
+  mezzoId: number;
+  posizione: string;
+  coordinate: string;
+  ultimoAggiornamento: string;
+  caricoDisponibile: string;
+  capacitaCarico: string;
+  temperatura: string;
+  velocita: string;
+  autonomia: string;
+  statoMotore: string;
+}
+
+type SettingsTab = 'generale' | 'sistema' | 'licenza' | 'accessi' | 'telemetria';
 
 @Component({
   selector: 'app-impostazioni',
@@ -56,10 +69,30 @@ export class Impostazioni {
     { key: 'generale', label: 'Generale' },
     { key: 'sistema', label: 'Sistema' },
     { key: 'licenza', label: 'Licenza' },
-    { key: 'accessi', label: 'Accessi' }
+    { key: 'accessi', label: 'Accessi' },
+    { key: 'telemetria', label: 'Telemetria Pro' }
   ];
 
   readonly activeTab = signal<SettingsTab>('generale');
+
+  readonly telemetriaProAbilitata = true;
+  readonly mezzoTelemetriaId = signal(1);
+
+  readonly mezziTelemetria = [
+    { id: 1, targa: 'AB123CD', modello: 'Iveco Daily' },
+    { id: 2, targa: 'EF456GH', modello: 'Fiat Ducato' },
+    { id: 3, targa: 'IL789MN', modello: 'Mercedes Sprinter' },
+    { id: 4, targa: 'OP321QR', modello: 'Piaggio Porter' },
+    { id: 5, targa: 'ST654UV', modello: 'Renault Master' }
+  ];
+
+  readonly telemetrie: TelemetriaMezzo[] = [
+    { mezzoId: 1, posizione: 'Via Torino 42, Milano', coordinate: '45.4642° N, 9.1900° E', ultimoAggiornamento: '26/08/2026 · 10:42', caricoDisponibile: '420 kg', capacitaCarico: '1.200 kg', temperatura: '4,8 °C', velocita: '38 km/h', autonomia: '286 km', statoMotore: 'Acceso' },
+    { mezzoId: 2, posizione: 'Viale Europa 16, Monza', coordinate: '45.5845° N, 9.2744° E', ultimoAggiornamento: '26/08/2026 · 10:39', caricoDisponibile: '780 kg', capacitaCarico: '1.500 kg', temperatura: '6,2 °C', velocita: '0 km/h', autonomia: '412 km', statoMotore: 'In sosta' },
+    { mezzoId: 3, posizione: 'Officina Nord, Milano', coordinate: '45.5156° N, 9.2198° E', ultimoAggiornamento: '26/08/2026 · 09:58', caricoDisponibile: '0 kg', capacitaCarico: '1.500 kg', temperatura: '18,4 °C', velocita: '0 km/h', autonomia: '0 km', statoMotore: 'Manutenzione' },
+    { mezzoId: 4, posizione: 'Via Garibaldi 7, Sesto San Giovanni', coordinate: '45.5340° N, 9.2370° E', ultimoAggiornamento: '26/08/2026 · 10:35', caricoDisponibile: '96 kg', capacitaCarico: '650 kg', temperatura: '7,1 °C', velocita: '24 km/h', autonomia: '154 km', statoMotore: 'Acceso' },
+    { mezzoId: 5, posizione: 'Deposito FutureDelivery, Milano', coordinate: '45.4862° N, 9.2045° E', ultimoAggiornamento: '25/08/2026 · 18:12', caricoDisponibile: '0 kg', capacitaCarico: '1.500 kg', temperatura: '19,1 °C', velocita: '0 km/h', autonomia: '0 km', statoMotore: 'Fuori servizio' }
+  ];
 
   readonly accessiCollaboratori = signal<CollaboratoreAccesso[]>([
     { id: 1, nome: 'Marco', cognome: 'Rossi', ruolo: 'Autista', enabled: true },
@@ -90,6 +123,14 @@ export class Impostazioni {
     return this.accessiCollaboratori().filter((c) => c.enabled).length;
   }
 
+  get mezzoTelemetria(): { targa: string; modello: string } | undefined {
+    return this.mezziTelemetria.find((mezzo) => mezzo.id === this.mezzoTelemetriaId());
+  }
+
+  get telemetriaSelezionata(): TelemetriaMezzo | undefined {
+    return this.telemetrie.find((telemetria) => telemetria.mezzoId === this.mezzoTelemetriaId());
+  }
+
   get statoLicenza(): string {
     const oggi = new Date();
     oggi.setHours(0, 0, 0, 0);
@@ -113,6 +154,10 @@ export class Impostazioni {
 
   selectTab(tab: SettingsTab): void {
     this.activeTab.set(tab);
+  }
+
+  selectMezzoTelemetria(id: number): void {
+    this.mezzoTelemetriaId.set(id);
   }
 
   toggleSetting(key: string): void {
