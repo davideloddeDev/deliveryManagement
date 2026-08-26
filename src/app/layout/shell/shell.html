@@ -8,6 +8,10 @@
     <img class="brand-logo" src="logo.svg" alt="" />
     <h1>futureDelivery <span>Gestionale</span></h1>
     <div class="topbar-spacer"></div>
+    <div class="user-profile" aria-label="Utente collegato">
+      <span class="user-avatar" aria-hidden="true">{{ currentUser().nome.charAt(0) }}{{ currentUser().cognome.charAt(0) }}</span>
+      <span class="user-name">{{ currentUser().nome }} {{ currentUser().cognome }}</span>
+    </div>
     <button class="logout" type="button" (click)="logout()">Esci</button>
   </header>
 

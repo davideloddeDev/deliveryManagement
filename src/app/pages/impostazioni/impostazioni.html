@@ -98,18 +98,37 @@
   }
 
   @if (activeTab() === 'licenza') {
-    <article class="widget">
-      <div class="widget-header">
-        <h3>Licenza software</h3>
+    <article class="widget license-widget">
+      <div class="license-hero">
+        <div>
+          <div class="eyebrow">Piano attivo</div>
+          <h3>Licenza software</h3>
+          <p>Gestisci il piano e le condizioni di rinnovo del servizio.</p>
+        </div>
         <span class="status-badge" [class.status-attiva]="statoLicenza === 'Attiva'" [class.status-warning]="statoLicenza === 'In scadenza'" [class.status-danger]="statoLicenza === 'Scaduta'">
           {{ statoLicenza }}
         </span>
       </div>
 
-      <div class="license-grid">
-        <div class="license-summary">
+      <div class="license-overview">
+        <div class="license-type">
+          <span class="license-mark" aria-hidden="true">FD</span>
+          <div>
+            <p class="label">Tipo di licenza</p>
+            <strong>{{ licenza.tipo }}</strong>
+            <span>Accesso completo alla gestione aziendale</span>
+          </div>
+        </div>
+
+        <div class="license-expiry">
           <p class="label">Scadenza licenza</p>
           <strong>{{ licenza.scadenza }}</strong>
+          <span>{{ licenza.rinnovoAutomatico ? 'Rinnovo automatico attivo' : 'Rinnovo automatico disattivo' }}</span>
+        </div>
+      </div>
+
+      <div class="license-footer">
+        <div>
           <p class="muted">
             {{ licenza.rinnovoAutomatico ? 'Il sistema rinnova automaticamente la licenza prima della scadenza.' : 'Al termine della licenza il servizio verrà interrotto.' }}
           </p>
@@ -118,15 +137,35 @@
         <div class="license-actions">
           <p class="label">Azione alla scadenza</p>
 
-          <label class="option-row">
-            <input type="radio" name="licenseAction" [value]="true" [(ngModel)]="licenza.rinnovoAutomatico" />
-            <span>Rinnovo automatico</span>
+          <label class="option-row" [class.selected]="licenza.rinnovoAutomatico">
+            <input id="automatic-renewal" type="radio" name="licenseAction" [value]="true" [(ngModel)]="licenza.rinnovoAutomatico" />
+            <span class="option-indicator option-indicator-renew" aria-hidden="true">↻</span>
+            <span class="option-copy">
+              <strong>Rinnovo automatico</strong>
+              <small>Il servizio resta attivo senza interruzioni.</small>
+            </span>
+            <span class="option-check" aria-hidden="true"></span>
           </label>
 
-          <label class="option-row">
-            <input type="radio" name="licenseAction" [value]="false" [(ngModel)]="licenza.rinnovoAutomatico" />
-            <span>Interrompi servizio</span>
+          <label class="option-row" [class.selected]="!licenza.rinnovoAutomatico">
+            <input id="stop-service" type="radio" name="licenseAction" [value]="false" [(ngModel)]="licenza.rinnovoAutomatico" />
+            <span class="option-indicator option-indicator-stop" aria-hidden="true">!</span>
+            <span class="option-copy">
+              <strong>Interrompi servizio</strong>
+              <small>L’accesso viene sospeso alla data di scadenza.</small>
+            </span>
+            <span class="option-check" aria-hidden="true"></span>
           </label>
+
+          @if (!licenza.rinnovoAutomatico) {
+            <div class="license-alert" role="alert" aria-live="polite">
+              <span class="alert-mark" aria-hidden="true">!</span>
+              <div>
+                <strong>Attenzione: servizio programmato per l’interruzione</strong>
+                <p>Alla scadenza del {{ licenza.scadenza }} l’accesso verrà sospeso e non verrà effettuato alcun rinnovo.</p>
+              </div>
+            </div>
+          }
         </div>
       </div>
     </article>

@@ -2,11 +2,18 @@ import { Injectable, signal } from '@angular/core';
 
 const STORAGE_KEY = 'fd_auth_logged_in';
 
+interface UserProfile {
+  nome: string;
+  cognome: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly loggedIn = signal<boolean>(localStorage.getItem(STORAGE_KEY) === 'true');
+  private readonly user = signal<UserProfile>({ nome: 'Davide', cognome: 'Lodde' });
 
   readonly isLoggedIn = this.loggedIn.asReadonly();
+  readonly currentUser = this.user.asReadonly();
 
   // Login fake: accetta qualsiasi credenziale non vuota
   login(username: string, password: string): boolean {

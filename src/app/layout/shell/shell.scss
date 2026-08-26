@@ -38,6 +38,28 @@
     flex: 1;
   }
 
+  .user-profile {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: #d0d5dd;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .user-avatar {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    background: #1570ef;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
   .logout {
     padding: 0.4rem 1rem;
     border: 1px solid rgba(255, 255, 255, 0.15);

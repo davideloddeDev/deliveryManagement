@@ -14,6 +14,7 @@ export class Shell {
   private readonly router = inject(Router);
 
   readonly menuOpen = signal(true);
+  readonly currentUser = this.authService.currentUser;
 
   readonly menuItems = [
     { path: 'dashboard', label: 'Dashboard', icon: 'dashboard' },

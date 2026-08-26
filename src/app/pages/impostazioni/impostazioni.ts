@@ -17,6 +17,7 @@ interface AziendaProfile {
 }
 
 interface LicenzaSoftware {
+  tipo: string;
   scadenza: string;
   rinnovoAutomatico: boolean;
 }
@@ -61,6 +62,7 @@ export class Impostazioni {
   };
 
   readonly licenza: LicenzaSoftware = {
+    tipo: 'Professional',
     scadenza: '31/12/2026',
     rinnovoAutomatico: true
   };
