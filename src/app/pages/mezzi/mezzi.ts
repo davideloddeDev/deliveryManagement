@@ -1,6 +1,9 @@
-import { Component, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Component, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
+import { API_ENDPOINTS } from '../../core/api-endpoints';
 
 type StatoMezzo = 'Attivo' | 'In manutenzione' | 'Fuori servizio';
 type StatoAssicurazione = 'Valida' | 'In scadenza' | 'Scaduta';
@@ -42,15 +45,9 @@ const EMPTY_FORM: MezzoForm = {
   styleUrl: './mezzi.scss'
 })
 export class Mezzi {
-  private nextId = 6;
+  private readonly http = inject(HttpClient);
 
-  readonly mezzi = signal<Mezzo[]>([
-    { id: 1, targa: 'AB123CD', modello: 'Iveco Daily', tipo: 'Furgone', stato: 'Attivo', km: 84500, ultimaManutenzione: '12/06/2026', compagniaAssicurativa: 'Generali', numeroPolizza: 'GEN-2026-001', scadenzaAssicurazione: '15/10/2026', pagamentoAssicurazioneAutorizzato: false },
-    { id: 2, targa: 'EF456GH', modello: 'Fiat Ducato', tipo: 'Furgone', stato: 'Attivo', km: 62300, ultimaManutenzione: '03/07/2026', compagniaAssicurativa: 'Allianz', numeroPolizza: 'ALZ-2025-118', scadenzaAssicurazione: '10/09/2026', pagamentoAssicurazioneAutorizzato: false },
-    { id: 3, targa: 'IL789MN', modello: 'Mercedes Sprinter', tipo: 'Furgone', stato: 'In manutenzione', km: 121400, ultimaManutenzione: '20/08/2026', compagniaAssicurativa: 'Unipol', numeroPolizza: 'UNI-2026-054', scadenzaAssicurazione: '01/12/2026', pagamentoAssicurazioneAutorizzato: false },
-    { id: 4, targa: 'OP321QR', modello: 'Piaggio Porter', tipo: 'Mezzo leggero', stato: 'Attivo', km: 45900, ultimaManutenzione: '28/05/2026', compagniaAssicurativa: 'Generali', numeroPolizza: 'GEN-2025-233', scadenzaAssicurazione: '05/09/2026', pagamentoAssicurazioneAutorizzato: false },
-    { id: 5, targa: 'ST654UV', modello: 'Renault Master', tipo: 'Furgone', stato: 'Fuori servizio', km: 158700, ultimaManutenzione: '02/03/2026', compagniaAssicurativa: 'Allianz', numeroPolizza: 'ALZ-2024-077', scadenzaAssicurazione: '20/07/2026', pagamentoAssicurazioneAutorizzato: false }
-  ]);
+  readonly mezzi = signal<Mezzo[]>([]);
 
   readonly tipiMezzo = ['Furgone', 'Mezzo leggero', 'Camion', 'Moto'];
   readonly statiMezzo: StatoMezzo[] = ['Attivo', 'In manutenzione', 'Fuori servizio'];
@@ -58,6 +55,10 @@ export class Mezzi {
   readonly showForm = signal(false);
   readonly editingId = signal<number | null>(null);
   form: MezzoForm = { ...EMPTY_FORM };
+
+  constructor() {
+    void this.loadMezzi();
+  }
 
   get totale(): number {
     return this.mezzi().length;
@@ -110,10 +111,13 @@ export class Mezzi {
     return new Date(anno, mese - 1, giorno);
   }
 
-  autorizzaPagamentoAssicurazione(mezzo: Mezzo): void {
-    this.mezzi.update((list) =>
-      list.map((m) => (m.id === mezzo.id ? { ...m, pagamentoAssicurazioneAutorizzato: true } : m))
-    );
+  async autorizzaPagamentoAssicurazione(mezzo: Mezzo): Promise<void> {
+    try {
+      await firstValueFrom(this.http.post(API_ENDPOINTS.mezzi.authorizeInsurancePayment(mezzo.id), {}));
+      await this.loadMezzi();
+    } catch {
+      // Ignora errori runtime e mantiene lo stato corrente.
+    }
   }
 
   openCreateForm(): void {
@@ -134,24 +138,80 @@ export class Mezzi {
     this.editingId.set(null);
   }
 
-  saveMezzo(): void {
+  async saveMezzo(): Promise<void> {
     if (!this.form.targa || !this.form.modello) {
       return;
     }
 
-    const editingId = this.editingId();
-    if (editingId !== null) {
-      this.mezzi.update((list) =>
-        list.map((m) => (m.id === editingId ? { id: editingId, ...this.form } : m))
-      );
-    } else {
-      this.mezzi.update((list) => [...list, { id: this.nextId++, ...this.form }]);
-    }
+    try {
+      const payload = {
+        targa: this.form.targa,
+        modello: this.form.modello,
+        tipo: this.form.tipo,
+        stato: this.form.stato,
+        km: this.form.km,
+        ultimaManutenzione: this.form.ultimaManutenzione,
+        compagniaAssicurativa: this.form.compagniaAssicurativa,
+        numeroPolizza: this.form.numeroPolizza,
+        scadenzaAssicurazione: this.form.scadenzaAssicurazione,
+        pagamentoAssicurazioneAutorizzato: this.form.pagamentoAssicurazioneAutorizzato
+      };
 
-    this.closeForm();
+      const editingId = this.editingId();
+      if (editingId !== null) {
+        await firstValueFrom(this.http.patch(API_ENDPOINTS.mezzi.byId(editingId), payload));
+      } else {
+        await firstValueFrom(this.http.post(API_ENDPOINTS.mezzi.list, payload));
+      }
+
+      await this.loadMezzi();
+      this.closeForm();
+    } catch {
+      // Mantiene il form aperto in caso di errore API.
+    }
   }
 
-  deleteMezzo(id: number): void {
-    this.mezzi.update((list) => list.filter((m) => m.id !== id));
+  async deleteMezzo(id: number): Promise<void> {
+    try {
+      await firstValueFrom(this.http.delete(API_ENDPOINTS.mezzi.byId(id)));
+      await this.loadMezzi();
+    } catch {
+      // Ignora errori runtime e mantiene lo stato corrente.
+    }
+  }
+
+  private async loadMezzi(): Promise<void> {
+    try {
+      const response = await firstValueFrom(
+        this.http.get<{ data: Array<Record<string, unknown>> }>(API_ENDPOINTS.mezzi.list)
+      );
+
+      const payload = (response as { data?: Array<Record<string, unknown>> }).data ?? [];
+      this.mezzi.set(payload.map((item) => {
+        const source = item as Record<string, unknown>;
+        return {
+          id: Number(source['id'] ?? 0),
+          targa: String(source['targa'] ?? ''),
+          modello: String(source['modello'] ?? ''),
+          tipo: String(source['tipo'] ?? 'Furgone'),
+          stato: this.normalizeStato(String(source['stato'] ?? 'Attivo')),
+          km: Number(source['km'] ?? 0),
+          ultimaManutenzione: String(source['ultimaManutenzione'] ?? ''),
+          compagniaAssicurativa: String(source['compagniaAssicurativa'] ?? ''),
+          numeroPolizza: String(source['numeroPolizza'] ?? ''),
+          scadenzaAssicurazione: String(source['scadenzaAssicurazione'] ?? ''),
+          pagamentoAssicurazioneAutorizzato: Boolean(source['pagamentoAssicurazioneAutorizzato'])
+        };
+      }));
+    } catch {
+      this.mezzi.set([]);
+    }
+  }
+
+  private normalizeStato(value: string): StatoMezzo {
+    if (value === 'In manutenzione' || value === 'Fuori servizio') {
+      return value;
+    }
+    return 'Attivo';
   }
 }

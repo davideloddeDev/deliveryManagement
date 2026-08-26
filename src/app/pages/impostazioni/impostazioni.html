@@ -125,6 +125,12 @@
           <strong>{{ licenza.scadenza }}</strong>
           <span>{{ licenza.rinnovoAutomatico ? 'Rinnovo automatico attivo' : 'Rinnovo automatico disattivo' }}</span>
         </div>
+
+        <div class="license-expiry">
+          <p class="label">Versione e utilizzo</p>
+          <strong>{{ versioneLicenza }}</strong>
+          <span>{{ accountRegistrati }} / {{ accountRegistrabili }} account registrati</span>
+        </div>
       </div>
 
       <div class="license-footer">

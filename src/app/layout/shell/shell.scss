@@ -5,6 +5,59 @@
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
+.api-loading {
+  padding: 0.45rem 1rem;
+  background: #eff8ff;
+  color: #175cd3;
+  border-bottom: 1px solid #b2ddff;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.api-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 1rem;
+  background: #fef3f2;
+  color: #b42318;
+  border-bottom: 1px solid #fecdca;
+  font-size: 0.85rem;
+
+  button {
+    border: 1px solid #fecdca;
+    border-radius: 6px;
+    background: #fff;
+    color: #b42318;
+    cursor: pointer;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.78rem;
+  }
+}
+
+.api-success {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 1rem;
+  background: #ecfdf3;
+  color: #067647;
+  border-bottom: 1px solid #abefc6;
+  font-size: 0.85rem;
+
+  button {
+    border: 1px solid #abefc6;
+    border-radius: 6px;
+    background: #fff;
+    color: #067647;
+    cursor: pointer;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.78rem;
+  }
+}
+
 .topbar {
   display: flex;
   align-items: center;

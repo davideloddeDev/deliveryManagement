@@ -1,65 +1,62 @@
-.login-page {
+.register-page {
   display: flex;
   min-height: 100vh;
-  background: #f9fafb;
-  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: linear-gradient(135deg, #f4f7ff 0%, #eef3ff 100%);
+}
+
+.brand-panel,
+.form-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
 }
 
 .brand-panel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  flex: 1;
-  padding: 2rem;
+  background: linear-gradient(160deg, #0f172a 0%, #1d4ed8 100%);
   color: #fff;
+  flex-direction: column;
   text-align: center;
-  background: linear-gradient(135deg, #101828 0%, #1570ef 100%);
 
   .logo {
-    width: 72px;
-    height: 72px;
-    margin-bottom: 0.5rem;
-    filter: brightness(0) invert(1);
+    width: 96px;
+    height: 96px;
+    margin-bottom: 1rem;
+    border-radius: 18px;
+    object-fit: contain;
   }
 
   h1 {
     margin: 0;
-    font-size: 2rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
+    font-size: clamp(2rem, 3vw, 3rem);
   }
 
   p {
-    margin: 0;
-    max-width: 320px;
-    color: #d0d5dd;
-    font-size: 0.95rem;
+    margin: 0.75rem 0 0;
+    max-width: 420px;
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.8);
   }
 }
 
 .form-panel {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  padding: 2rem;
+  background: rgba(255, 255, 255, 0.4);
 }
 
-.login-card {
+.register-card {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 360px;
-  padding: 2.5rem;
+  max-width: 520px;
+  padding: 2.25rem;
+  border-radius: 16px;
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.08);
+  box-shadow: 0 8px 26px rgba(20, 28, 45, 0.08);
 
   h2 {
     margin: 0 0 0.35rem;
-    font-size: 1.4rem;
+    font-size: 1.5rem;
     font-weight: 700;
     color: #101828;
   }
@@ -77,6 +74,18 @@
     color: #344054;
   }
 
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+  }
+
   .password-field {
     display: flex;
     align-items: center;
@@ -90,11 +99,13 @@
   }
 
   input {
-    padding: 0.65rem 0.75rem;
+    width: 100%;
+    padding: 0.7rem 0.8rem;
     margin-bottom: 1.1rem;
     border: 1px solid #d0d5dd;
-    border-radius: 6px;
+    border-radius: 8px;
     font-size: 0.95rem;
+    box-sizing: border-box;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 
     &::placeholder {
@@ -116,7 +127,7 @@
     background: #f8fafc;
     color: #344054;
     padding: 0.55rem;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
 
     svg {
@@ -129,19 +140,19 @@
   }
 
   .error {
-    margin: -0.5rem 0 1rem;
+    margin: -0.25rem 0 1rem;
     color: #d92d20;
     font-size: 0.85rem;
   }
 
   .submit-button {
-    padding: 0.75rem;
+    padding: 0.8rem;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     background: #1570ef;
-    color: #fff;
-    font-size: 0.95rem;
-    font-weight: 600;
+    color: white;
+    font-size: 0.96rem;
+    font-weight: 700;
     cursor: pointer;
     transition: background 0.15s ease;
 
@@ -164,8 +175,17 @@
   }
 }
 
-@media (max-width: 860px) {
-  .brand-panel {
-    display: none;
+@media (max-width: 760px) {
+  .register-page {
+    flex-direction: column;
+  }
+
+  .brand-panel,
+  .form-panel {
+    width: 100%;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
   }
 }

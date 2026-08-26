@@ -1,6 +1,10 @@
-import { Component, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
+import { ApiFeedbackService } from '../../core/api-feedback.service';
+import { API_ENDPOINTS, POLLING_CONFIG } from '../../core/api-endpoints';
 
 type StatoConsegna = 'In attesa' | 'In transito' | 'Consegnato' | 'Annullata';
 
@@ -36,16 +40,13 @@ const EMPTY_FORM: ConsegnaForm = {
   templateUrl: './consegne.html',
   styleUrl: './consegne.scss'
 })
-export class Consegne {
-  private nextId = 6;
+export class Consegne implements OnDestroy {
+  private readonly http = inject(HttpClient);
+  private readonly feedback = inject(ApiFeedbackService);
+  private readonly refreshMs = POLLING_CONFIG.consegneMs;
+  private refreshTimer: ReturnType<typeof setInterval> | null = null;
 
-  readonly consegne = signal<Consegna[]>([
-    { id: 1, codice: '#FD-1042', cliente: 'Rossi Logistics', indirizzo: 'Via Roma 12, Milano', targaMezzo: 'AB123CD', autista: 'Marco Rossi', stato: 'Consegnato', dataConsegna: '25/08/2026 09:12', importo: 145 },
-    { id: 2, codice: '#FD-1041', cliente: 'Bianchi Srl', indirizzo: 'Via Torino 45, Milano', targaMezzo: 'IL789MN', autista: 'Luca Verdi', stato: 'In transito', dataConsegna: '25/08/2026 08:47', importo: 210 },
-    { id: 3, codice: '#FD-1040', cliente: 'Verdi Distribuzione', indirizzo: 'Corso Genova 8, Torino', targaMezzo: 'OP321QR', autista: 'Davide Gialli', stato: 'In attesa', dataConsegna: '25/08/2026 08:15', importo: 98 },
-    { id: 4, codice: '#FD-1039', cliente: 'Neri Trasporti', indirizzo: 'Via Napoli 3, Bologna', targaMezzo: 'EF456GH', autista: 'Marco Rossi', stato: 'Consegnato', dataConsegna: '24/08/2026 17:30', importo: 176 },
-    { id: 5, codice: '#FD-1038', cliente: 'Gialli Market', indirizzo: 'Via Firenze 21, Bologna', targaMezzo: 'ST654UV', autista: 'Luca Verdi', stato: 'Annullata', dataConsegna: '24/08/2026 16:05', importo: 0 }
-  ]);
+  readonly consegne = signal<Consegna[]>([]);
 
   readonly statiConsegna: StatoConsegna[] = ['In attesa', 'In transito', 'Consegnato', 'Annullata'];
 
@@ -53,6 +54,20 @@ export class Consegne {
   readonly editingId = signal<number | null>(null);
   readonly searchTerm = signal('');
   form: ConsegnaForm = { ...EMPTY_FORM };
+
+  constructor() {
+    void this.loadConsegne();
+    this.refreshTimer = setInterval(() => {
+      void this.loadConsegne();
+    }, this.refreshMs);
+  }
+
+  ngOnDestroy(): void {
+    if (this.refreshTimer) {
+      clearInterval(this.refreshTimer);
+      this.refreshTimer = null;
+    }
+  }
 
   get consegneFiltrate(): Consegna[] {
     const termine = this.searchTerm().trim().toLowerCase();
@@ -101,24 +116,87 @@ export class Consegne {
     this.editingId.set(null);
   }
 
-  saveConsegna(): void {
+  async saveConsegna(): Promise<void> {
     if (!this.form.codice || !this.form.cliente) {
       return;
     }
 
-    const editingId = this.editingId();
-    if (editingId !== null) {
-      this.consegne.update((list) =>
-        list.map((c) => (c.id === editingId ? { id: editingId, ...this.form } : c))
-      );
-    } else {
-      this.consegne.update((list) => [...list, { id: this.nextId++, ...this.form }]);
-    }
+    try {
+      const payload = {
+        codice: this.form.codice,
+        cliente: this.form.cliente,
+        indirizzo: this.form.indirizzo,
+        targaMezzo: this.form.targaMezzo,
+        autista: this.form.autista,
+        stato: this.form.stato,
+        dataConsegna: this.form.dataConsegna,
+        importo: this.form.importo
+      };
 
-    this.closeForm();
+      const editingId = this.editingId();
+      if (editingId !== null) {
+        await firstValueFrom(
+          this.http.patch(API_ENDPOINTS.consegne.byId(editingId), payload)
+        );
+        this.feedback.setSuccess('Consegna aggiornata con successo');
+      } else {
+        await firstValueFrom(this.http.post(API_ENDPOINTS.consegne.list, payload));
+        this.feedback.setSuccess('Consegna creata con successo');
+      }
+
+      await this.loadConsegne();
+      this.closeForm();
+    } catch {
+      // Mantiene il form aperto in caso di errore API.
+    }
   }
 
-  deleteConsegna(id: number): void {
-    this.consegne.update((list) => list.filter((c) => c.id !== id));
+  async deleteConsegna(id: number): Promise<void> {
+    try {
+      await firstValueFrom(this.http.delete(API_ENDPOINTS.consegne.byId(id)));
+      this.feedback.setSuccess('Consegna eliminata con successo');
+      await this.loadConsegne();
+    } catch {
+      // Ignora errori runtime e mantiene lo stato corrente.
+    }
+  }
+
+  private async loadConsegne(): Promise<void> {
+    try {
+      const response = await firstValueFrom(
+        this.http.get<{ data: Array<Record<string, unknown>> }>(API_ENDPOINTS.consegne.list)
+      );
+      const payload = (response as { data?: Array<Record<string, unknown>> }).data ?? [];
+      this.consegne.set(payload.map((item) => this.fromApi(item)));
+    } catch {
+      this.consegne.set([]);
+    }
+  }
+
+  private fromApi(item: Record<string, unknown>): Consegna {
+    const source = item as Record<string, unknown>;
+    const id = Number(source['id'] ?? 0);
+    const codice = String(source['codice'] ?? `#FD-${id}`);
+    const mezzoId = source['mezzoId'] ? String(source['mezzoId']) : '';
+    const autistaId = source['autistaId'] ? String(source['autistaId']) : '';
+
+    return {
+      id,
+      codice,
+      cliente: String(source['cliente'] ?? ''),
+      indirizzo: String(source['indirizzo'] ?? ''),
+      targaMezzo: String(source['targaMezzo'] ?? (mezzoId ? `Mezzo ${mezzoId}` : '')),
+      autista: String(source['autista'] ?? (autistaId ? `Autista ${autistaId}` : '')),
+      stato: this.normalizeStatus(String(source['stato'] ?? 'In attesa')),
+      dataConsegna: String(source['dataConsegna'] ?? source['updatedAt'] ?? '-'),
+      importo: Number(source['importo'] ?? 0)
+    };
+  }
+
+  private normalizeStatus(stato: string): StatoConsegna {
+    if (stato === 'In transito' || stato === 'Consegnato' || stato === 'Annullata') {
+      return stato;
+    }
+    return 'In attesa';
   }
 }

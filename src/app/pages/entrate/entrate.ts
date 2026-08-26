@@ -1,6 +1,9 @@
-import { Component, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Component, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
+import { API_ENDPOINTS } from '../../core/api-endpoints';
 
 type TipoEntrata = 'Fatture' | 'Vendite' | 'Rimborsi';
 type StatoEntrata = 'Incassato' | 'In attesa';
@@ -25,24 +28,20 @@ type EntrataForm = Omit<Entrata, 'id'>;
   styleUrl: './entrate.scss'
 })
 export class Entrate {
-  private nextId = 8;
+  private readonly http = inject(HttpClient);
 
   readonly tabs: TipoEntrata[] = ['Fatture', 'Vendite', 'Rimborsi'];
   readonly activeTab = signal<TipoEntrata>('Fatture');
 
-  readonly entrate = signal<Entrata[]>([
-    { id: 1, tipo: 'Fatture', cliente: 'Rossi Logistics', descrizione: 'Fattura n. 2026/140', importo: 3200, stato: 'Incassato', data: '18/08/2026' },
-    { id: 2, tipo: 'Fatture', cliente: 'Bianchi Srl', descrizione: 'Fattura n. 2026/141', importo: 1850, stato: 'In attesa', data: '20/08/2026' },
-    { id: 3, tipo: 'Vendite', cliente: 'Nord Materiali', descrizione: 'Vendita pallet e imballaggi', importo: 920, stato: 'Incassato', data: '22/08/2026' },
-    { id: 4, tipo: 'Vendite', cliente: 'Verdi Distribuzione', descrizione: 'Variazione ordine urgente', importo: 1460, stato: 'In attesa', data: '24/08/2026' },
-    { id: 5, tipo: 'Rimborsi', cliente: 'Futura Service', descrizione: 'Rimborso spese carburante', importo: 280, stato: 'Incassato', data: '16/08/2026' },
-    { id: 6, tipo: 'Rimborsi', cliente: 'ECO Transport', descrizione: 'Rimborso pedaggi', importo: 160, stato: 'In attesa', data: '25/08/2026' },
-    { id: 7, tipo: 'Fatture', cliente: 'Gialli Market', descrizione: 'Fattura n. 2026/152', importo: 2580, stato: 'In attesa', data: '26/08/2026' }
-  ]);
+  readonly entrate = signal<Entrata[]>([]);
 
   readonly showForm = signal(false);
   readonly editingId = signal<number | null>(null);
   form: EntrataForm = this.emptyForm();
+
+  constructor() {
+    void this.loadEntrate();
+  }
 
   get entrateFiltrate(): Entrata[] {
     return this.entrate().filter((e) => e.tipo === this.activeTab());
@@ -99,30 +98,89 @@ export class Entrate {
     this.editingId.set(null);
   }
 
-  saveEntrata(): void {
+  async saveEntrata(): Promise<void> {
     if (!this.form.cliente || !this.form.descrizione) {
       return;
     }
 
-    const editingId = this.editingId();
-    if (editingId !== null) {
-      this.entrate.update((list) =>
-        list.map((e) => (e.id === editingId ? { id: editingId, ...this.form } : e))
-      );
-    } else {
-      this.entrate.update((list) => [...list, { id: this.nextId++, ...this.form }]);
+    try {
+      const payload = {
+        tipo: this.form.tipo,
+        cliente: this.form.cliente,
+        descrizione: this.form.descrizione,
+        importo: this.form.importo,
+        stato: this.form.stato,
+        data: this.form.data,
+        metodo: 'Bonifico',
+        riferimento: this.form.descrizione
+      };
+
+      const editingId = this.editingId();
+      if (editingId !== null) {
+        await firstValueFrom(this.http.patch(API_ENDPOINTS.entrate.byId(editingId), payload));
+      } else {
+        await firstValueFrom(this.http.post(API_ENDPOINTS.entrate.list, payload));
+      }
+
+      await this.loadEntrate();
+      this.closeForm();
+    } catch {
+      // Mantiene il form aperto in caso di errore API.
     }
-
-    this.closeForm();
   }
 
-  segnaComeIncassato(entrata: Entrata): void {
-    this.entrate.update((list) =>
-      list.map((e) => (e.id === entrata.id ? { ...e, stato: 'Incassato' } : e))
-    );
+  async segnaComeIncassato(entrata: Entrata): Promise<void> {
+    try {
+      await firstValueFrom(this.http.patch(API_ENDPOINTS.entrate.markReceived(entrata.id), {}));
+      await this.loadEntrate();
+    } catch {
+      // Ignora errori runtime e mantiene lo stato corrente.
+    }
   }
 
-  deleteEntrata(id: number): void {
-    this.entrate.update((list) => list.filter((e) => e.id !== id));
+  async deleteEntrata(id: number): Promise<void> {
+    try {
+      await firstValueFrom(this.http.delete(API_ENDPOINTS.entrate.byId(id)));
+      await this.loadEntrate();
+    } catch {
+      // Ignora errori runtime e mantiene lo stato corrente.
+    }
+  }
+
+  private async loadEntrate(): Promise<void> {
+    try {
+      const response = await firstValueFrom(
+        this.http.get<{ data: Array<Record<string, unknown>> }>(API_ENDPOINTS.entrate.list)
+      );
+      const payload = (response as { data?: Array<Record<string, unknown>> }).data ?? [];
+      this.entrate.set(payload.map((item) => {
+        const source = item as Record<string, unknown>;
+        return {
+          id: Number(source['id'] ?? 0),
+          tipo: this.normalizeTipo(String(source['tipo'] ?? 'Fatture')),
+          cliente: String(source['cliente'] ?? ''),
+          descrizione: String(source['descrizione'] ?? source['riferimento'] ?? ''),
+          importo: Number(source['importo'] ?? 0),
+          stato: this.normalizeStato(String(source['stato'] ?? 'In attesa')),
+          data: String(source['data'] ?? source['dataIncasso'] ?? '-')
+        };
+      }));
+    } catch {
+      this.entrate.set([]);
+    }
+  }
+
+  private normalizeTipo(value: string): TipoEntrata {
+    if (value === 'Vendite' || value === 'Rimborsi') {
+      return value;
+    }
+    return 'Fatture';
+  }
+
+  private normalizeStato(value: string): StatoEntrata {
+    if (value === 'Incassato') {
+      return value;
+    }
+    return 'In attesa';
   }
 }

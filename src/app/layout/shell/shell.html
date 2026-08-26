@@ -1,4 +1,22 @@
 <div class="shell">
+  @if (isLoading() > 0) {
+    <div class="api-loading" aria-live="polite">Sincronizzazione in corso...</div>
+  }
+
+  @if (lastError(); as errorMessage) {
+    <div class="api-error" role="alert">
+      <span>{{ errorMessage }}</span>
+      <button type="button" (click)="clearError()" aria-label="Chiudi avviso">Chiudi</button>
+    </div>
+  }
+
+  @if (lastSuccess(); as successMessage) {
+    <div class="api-success" aria-live="polite">
+      <span>{{ successMessage }}</span>
+      <button type="button" (click)="clearSuccess()" aria-label="Chiudi conferma">Chiudi</button>
+    </div>
+  }
+
   <header class="topbar">
     <button class="hamburger" type="button" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen()" aria-label="Attiva/disattiva menu">
       <span></span>

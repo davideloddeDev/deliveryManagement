@@ -1,5 +1,9 @@
-import { Component, signal } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
+import { AuthService } from '../../auth/auth.service';
+import { API_ENDPOINTS } from '../../core/api-endpoints';
 
 interface SettingItem {
   key: string;
@@ -20,6 +24,17 @@ interface LicenzaSoftware {
   tipo: string;
   scadenza: string;
   rinnovoAutomatico: boolean;
+}
+
+interface LicenseKeyItem {
+  id: number;
+  chiave: string;
+  dataInizio: string;
+  dataFine: string;
+  accountRegistrabili: number;
+  accountRegistrati: number;
+  versione: string;
+  stato: string;
 }
 
 interface CollaboratoreAccesso {
@@ -53,6 +68,9 @@ type SettingsTab = 'generale' | 'sistema' | 'licenza' | 'accessi' | 'telemetria'
   styleUrl: './impostazioni.scss'
 })
 export class Impostazioni {
+  private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
+
   readonly companyProfile: AziendaProfile = {
     nome: 'FutureDelivery S.r.l.',
     indirizzo: 'Via Roma 18, Milano',
@@ -66,6 +84,8 @@ export class Impostazioni {
     scadenza: '31/12/2026',
     rinnovoAutomatico: true
   };
+
+  readonly licenseKeys = signal<LicenseKeyItem[]>([]);
 
   readonly tabs: { key: SettingsTab; label: string }[] = [
     { key: 'generale', label: 'Generale' },
@@ -113,6 +133,10 @@ export class Impostazioni {
     { key: 'twoFactor', label: 'Autenticazione a due fattori', description: 'Protezione avanzata per il login amministrativo.', enabled: true }
   ]);
 
+  constructor() {
+    void this.loadLicenseData();
+  }
+
   get enabledSettings(): number {
     return this.settings().filter((setting) => setting.enabled).length;
   }
@@ -154,6 +178,22 @@ export class Impostazioni {
     return 'Attiva';
   }
 
+  get licenzaPrimaria(): LicenseKeyItem | undefined {
+    return this.licenseKeys().find((item) => item.id === 1) || this.licenseKeys()[0];
+  }
+
+  get accountRegistrati(): number {
+    return this.licenzaPrimaria?.accountRegistrati || 0;
+  }
+
+  get accountRegistrabili(): number {
+    return this.licenzaPrimaria?.accountRegistrabili || 0;
+  }
+
+  get versioneLicenza(): string {
+    return this.licenzaPrimaria?.versione || '-';
+  }
+
   selectTab(tab: SettingsTab): void {
     this.activeTab.set(tab);
   }
@@ -190,5 +230,52 @@ export class Impostazioni {
     }
 
     return new Date(anno, mese - 1, giorno);
+  }
+
+  private async loadLicenseData(): Promise<void> {
+    try {
+      const licensesResponse = await firstValueFrom(
+        this.http.get<{ data: LicenseKeyItem[] }>(API_ENDPOINTS.licenseKeys.list)
+      );
+      this.licenseKeys.set(licensesResponse.data || []);
+    } catch {
+      this.licenseKeys.set([]);
+    }
+
+    const headers = this.buildAuthHeaders();
+    if (!headers) {
+      return;
+    }
+
+    try {
+      const licenseSettings = await firstValueFrom(
+        this.http.get<{ tipo: string; scadenza: string; rinnovoAutomatico: boolean }>(
+          API_ENDPOINTS.settings.license,
+          { headers }
+        )
+      );
+
+      this.licenza.tipo = licenseSettings.tipo;
+      this.licenza.scadenza = this.formatDate(licenseSettings.scadenza);
+      this.licenza.rinnovoAutomatico = Boolean(licenseSettings.rinnovoAutomatico);
+    } catch {
+      // Mantiene i dati correnti se il backend non risponde.
+    }
+  }
+
+  private buildAuthHeaders(): HttpHeaders | null {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return null;
+    }
+    return new HttpHeaders({ Authorization: `Bearer ${token}` });
+  }
+
+  private formatDate(input: string): string {
+    const date = new Date(input);
+    if (Number.isNaN(date.getTime())) {
+      return input;
+    }
+    return date.toLocaleDateString('it-IT');
   }
 }
