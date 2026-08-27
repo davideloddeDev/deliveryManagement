@@ -29,6 +29,12 @@ export class AuthService {
   readonly isLoggedIn = this.loggedIn.asReadonly();
   readonly currentUser = this.user.asReadonly();
 
+  constructor() {
+    if (this.getAccessToken()) {
+      void this.restoreSession();
+    }
+  }
+
   async login(email: string, password: string): Promise<boolean> {
     if (!email || !password) {
       return false;
@@ -99,6 +105,28 @@ export class AuthService {
 
   getAccessToken(): string | null {
     return localStorage.getItem(STORAGE_TOKEN_KEY);
+  }
+
+  private async restoreSession(): Promise<void> {
+    const token = this.getAccessToken();
+    if (!token) {
+      this.clearSession();
+      return;
+    }
+
+    try {
+      const profile = await firstValueFrom(
+        this.http.get<UserProfile>(API_ENDPOINTS.auth.me, {
+          headers: new HttpHeaders({ Authorization: `Bearer ${token}` })
+        })
+      );
+      this.loggedIn.set(true);
+      this.user.set(profile);
+      localStorage.setItem(STORAGE_KEY, 'true');
+      localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(profile));
+    } catch {
+      this.clearSession();
+    }
   }
 
   private clearSession(): void {
