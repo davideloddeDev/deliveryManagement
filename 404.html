@@ -4,9 +4,17 @@
   <meta charset="utf-8">
   <title>DeliveryManagement</title>
   <script>
-    // Redirect to index.html for SPA routing
+    // Redirect all 404s to index.html for Angular SPA routing with correct path
     var path = window.location.pathname;
-    window.location.replace(path + 'index.html' + window.location.hash);
+    var search = window.location.search;
+    var hash = window.location.hash;
+    
+    // Only redirect if not already on index.html
+    if (!path.endsWith('index.html')) {
+      // Store the original path for Angular to handle
+      sessionStorage.redirectPath = path + search + hash;
+      window.location.replace('/deliveryManagement/index.html');
+    }
   </script>
 </head>
 <body>
