@@ -3,21 +3,16 @@
 <head>
   <meta charset="utf-8">
   <title>DeliveryManagement</title>
+  <meta http-equiv="refresh" content="0; url=/deliveryManagement/index.html">
+  <link rel="canonical" href="/deliveryManagement/index.html">
   <script>
-    // Redirect all 404s to index.html for Angular SPA routing with correct path
-    var path = window.location.pathname;
-    var search = window.location.search;
-    var hash = window.location.hash;
-    
-    // Only redirect if not already on index.html
-    if (!path.endsWith('index.html')) {
-      // Store the original path for Angular to handle
-      sessionStorage.redirectPath = path + search + hash;
+    // Fallback redirect in case meta refresh doesn't work
+    if (window.location.pathname !== '/deliveryManagement/index.html') {
       window.location.replace('/deliveryManagement/index.html');
     }
   </script>
 </head>
 <body>
-  Redirecting...
+  Redirecting to DeliveryManagement...
 </body>
 </html>
