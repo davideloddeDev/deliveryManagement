@@ -1,24 +1,12 @@
-import { HttpClient } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
-import { API_ENDPOINTS } from '../../core/api-endpoints';
+import { FakeDataService, Entrata } from '../../core/fake-data.service';
 
 type TipoEntrata = 'Fatture' | 'Vendite' | 'Rimborsi';
 type StatoEntrata = 'Incassato' | 'In attesa';
 
-interface Entrata {
-  id: number;
-  tipo: TipoEntrata;
-  cliente: string;
-  descrizione: string;
-  importo: number;
-  stato: StatoEntrata;
-  data: string;
-}
-
-type EntrataForm = Omit<Entrata, 'id'>;
+type EntrataForm = Omit<Entrata, 'id'> & { tipo: TipoEntrata; stato: StatoEntrata };
 
 @Component({
   selector: 'app-entrate',
@@ -28,7 +16,8 @@ type EntrataForm = Omit<Entrata, 'id'>;
   styleUrl: './entrate.scss'
 })
 export class Entrate {
-  private readonly http = inject(HttpClient);
+  private readonly fakeData = inject(FakeDataService);
+  private nextId = 100;
 
   readonly tabs: TipoEntrata[] = ['Fatture', 'Vendite', 'Rimborsi'];
   readonly activeTab = signal<TipoEntrata>('Fatture');
@@ -40,11 +29,11 @@ export class Entrate {
   form: EntrataForm = this.emptyForm();
 
   constructor() {
-    void this.loadEntrate();
+    this.loadEntrate();
   }
 
   get entrateFiltrate(): Entrata[] {
-    return this.entrate().filter((e) => e.tipo === this.activeTab());
+    return this.entrate();
   }
 
   get totaleImporto(): number {
@@ -52,17 +41,15 @@ export class Entrate {
   }
 
   get incassate(): number {
-    return this.entrateFiltrate.filter((e) => e.stato === 'Incassato').length;
+    return this.entrateFiltrate.length;
   }
 
   get inAttesa(): number {
-    return this.entrateFiltrate.filter((e) => e.stato === 'In attesa').length;
+    return 0;
   }
 
   get importoInAttesa(): number {
-    return this.entrateFiltrate
-      .filter((e) => e.stato === 'In attesa')
-      .reduce((sum, e) => sum + e.importo, 0);
+    return 0;
   }
 
   selectTab(tab: TipoEntrata): void {
@@ -71,12 +58,14 @@ export class Entrate {
 
   private emptyForm(): EntrataForm {
     return {
-      tipo: this.activeTab(),
-      cliente: '',
+      data: '',
       descrizione: '',
       importo: 0,
-      stato: 'In attesa',
-      data: ''
+      categoria: 'Consegne',
+      metodo: 'Bonifico',
+      cliente: '',
+      tipo: 'Fatture',
+      stato: 'In attesa'
     };
   }
 
@@ -89,7 +78,7 @@ export class Entrate {
   openEditForm(entrata: Entrata): void {
     this.editingId.set(entrata.id);
     const { id, ...rest } = entrata;
-    this.form = { ...rest };
+    this.form = { ...rest, tipo: 'Fatture', stato: 'Incassato' };
     this.showForm.set(true);
   }
 
@@ -98,89 +87,56 @@ export class Entrate {
     this.editingId.set(null);
   }
 
-  async saveEntrata(): Promise<void> {
-    if (!this.form.cliente || !this.form.descrizione) {
+  saveEntrata(): void {
+    if (!this.form.descrizione) {
       return;
     }
 
-    try {
-      const payload = {
-        tipo: this.form.tipo,
-        cliente: this.form.cliente,
+    const editingId = this.editingId();
+    const current = this.entrate();
+
+    if (editingId !== null) {
+      const index = current.findIndex((e) => e.id === editingId);
+      if (index !== -1) {
+        current[index] = { 
+          ...current[index], 
+          data: this.form.data,
+          descrizione: this.form.descrizione,
+          importo: this.form.importo,
+          categoria: this.form.categoria,
+          metodo: this.form.metodo,
+          cliente: this.form.cliente,
+          stato: this.form.stato
+        };
+        this.entrate.set([...current]);
+      }
+    } else {
+      const newEntrata: Entrata = {
+        id: this.nextId++,
+        data: this.form.data,
         descrizione: this.form.descrizione,
         importo: this.form.importo,
-        stato: this.form.stato,
-        data: this.form.data,
-        metodo: 'Bonifico',
-        riferimento: this.form.descrizione
+        categoria: this.form.categoria,
+        metodo: this.form.metodo,
+        cliente: this.form.cliente,
+        stato: this.form.stato
       };
-
-      const editingId = this.editingId();
-      if (editingId !== null) {
-        await firstValueFrom(this.http.patch(API_ENDPOINTS.entrate.byId(editingId), payload));
-      } else {
-        await firstValueFrom(this.http.post(API_ENDPOINTS.entrate.list, payload));
-      }
-
-      await this.loadEntrate();
-      this.closeForm();
-    } catch {
-      // Mantiene il form aperto in caso di errore API.
+      this.entrate.set([...current, newEntrata]);
     }
+
+    this.closeForm();
   }
 
-  async segnaComeIncassato(entrata: Entrata): Promise<void> {
-    try {
-      await firstValueFrom(this.http.patch(API_ENDPOINTS.entrate.markReceived(entrata.id), {}));
-      await this.loadEntrate();
-    } catch {
-      // Ignora errori runtime e mantiene lo stato corrente.
-    }
+  segnaComeIncassato(entrata: Entrata): void {
+    // Placeholder per incasso
   }
 
-  async deleteEntrata(id: number): Promise<void> {
-    try {
-      await firstValueFrom(this.http.delete(API_ENDPOINTS.entrate.byId(id)));
-      await this.loadEntrate();
-    } catch {
-      // Ignora errori runtime e mantiene lo stato corrente.
-    }
+  deleteEntrata(id: number): void {
+    const current = this.entrate();
+    this.entrate.set(current.filter((e) => e.id !== id));
   }
 
-  private async loadEntrate(): Promise<void> {
-    try {
-      const response = await firstValueFrom(
-        this.http.get<{ data: Array<Record<string, unknown>> }>(API_ENDPOINTS.entrate.list)
-      );
-      const payload = (response as { data?: Array<Record<string, unknown>> }).data ?? [];
-      this.entrate.set(payload.map((item) => {
-        const source = item as Record<string, unknown>;
-        return {
-          id: Number(source['id'] ?? 0),
-          tipo: this.normalizeTipo(String(source['tipo'] ?? 'Fatture')),
-          cliente: String(source['cliente'] ?? ''),
-          descrizione: String(source['descrizione'] ?? source['riferimento'] ?? ''),
-          importo: Number(source['importo'] ?? 0),
-          stato: this.normalizeStato(String(source['stato'] ?? 'In attesa')),
-          data: String(source['data'] ?? source['dataIncasso'] ?? '-')
-        };
-      }));
-    } catch {
-      this.entrate.set([]);
-    }
-  }
-
-  private normalizeTipo(value: string): TipoEntrata {
-    if (value === 'Vendite' || value === 'Rimborsi') {
-      return value;
-    }
-    return 'Fatture';
-  }
-
-  private normalizeStato(value: string): StatoEntrata {
-    if (value === 'Incassato') {
-      return value;
-    }
-    return 'In attesa';
+  private loadEntrate(): void {
+    this.entrate.set(this.fakeData.getEntrate());
   }
 }

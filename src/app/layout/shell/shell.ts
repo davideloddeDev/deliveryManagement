@@ -1,7 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
-import { ApiFeedbackService } from '../../core/api-feedback.service';
 
 @Component({
   selector: 'app-shell',
@@ -12,14 +11,13 @@ import { ApiFeedbackService } from '../../core/api-feedback.service';
 })
 export class Shell {
   private readonly authService = inject(AuthService);
-  private readonly feedback = inject(ApiFeedbackService);
   private readonly router = inject(Router);
 
   readonly menuOpen = signal(true);
   readonly currentUser = this.authService.currentUser;
-  readonly isLoading = this.feedback.isLoading;
-  readonly lastError = this.feedback.lastError;
-  readonly lastSuccess = this.feedback.lastSuccess;
+  readonly isLoading = signal(0);
+  readonly lastError = signal<string | null>(null);
+  readonly lastSuccess = signal<string | null>(null);
 
   readonly menuItems = [
     { path: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -41,10 +39,10 @@ export class Shell {
   }
 
   clearError(): void {
-    this.feedback.clearError();
+    this.lastError.set(null);
   }
 
   clearSuccess(): void {
-    this.feedback.clearSuccess();
+    this.lastSuccess.set(null);
   }
 }

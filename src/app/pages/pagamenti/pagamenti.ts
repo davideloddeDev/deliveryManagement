@@ -1,24 +1,12 @@
-import { HttpClient } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
-import { API_ENDPOINTS } from '../../core/api-endpoints';
+import { FakeDataService, Pagamento } from '../../core/fake-data.service';
 
 type TipoPagamento = 'Stipendi' | 'Mezzi' | 'Attrezzature';
-type StatoPagamento = 'Pagato' | 'Da pagare';
+type StatoPagamento = 'Pagato' | 'In sospeso' | 'Rifiutato';
 
-interface Pagamento {
-  id: number;
-  tipo: TipoPagamento;
-  riferimento: string;
-  descrizione: string;
-  importo: number;
-  stato: StatoPagamento;
-  data: string;
-}
-
-type PagamentoForm = Omit<Pagamento, 'id'>;
+type PagamentoForm = Omit<Pagamento, 'id'> & { tipo: TipoPagamento };
 
 @Component({
   selector: 'app-pagamenti',
@@ -28,7 +16,8 @@ type PagamentoForm = Omit<Pagamento, 'id'>;
   styleUrl: './pagamenti.scss'
 })
 export class Pagamenti {
-  private readonly http = inject(HttpClient);
+  private readonly fakeData = inject(FakeDataService);
+  private nextId = 100;
 
   readonly tabs: TipoPagamento[] = ['Stipendi', 'Mezzi', 'Attrezzature'];
   readonly activeTab = signal<TipoPagamento>('Stipendi');
@@ -40,11 +29,11 @@ export class Pagamenti {
   form: PagamentoForm = this.emptyForm();
 
   constructor() {
-    void this.loadPagamenti();
+    this.loadPagamenti();
   }
 
   get pagamentiFiltrati(): Pagamento[] {
-    return this.pagamenti().filter((p) => p.tipo === this.activeTab());
+    return this.pagamenti();
   }
 
   get totaleImporto(): number {
@@ -56,11 +45,11 @@ export class Pagamenti {
   }
 
   get totaleDaPagare(): number {
-    return this.pagamentiFiltrati.filter((p) => p.stato === 'Da pagare').length;
+    return this.pagamentiFiltrati.filter((p) => p.stato === 'In sospeso').length;
   }
 
   get importoDaPagare(): number {
-    return this.pagamentiFiltrati.filter((p) => p.stato === 'Da pagare').reduce((sum, p) => sum + p.importo, 0);
+    return this.pagamentiFiltrati.filter((p) => p.stato === 'In sospeso').reduce((sum, p) => sum + p.importo, 0);
   }
 
   selectTab(tab: TipoPagamento): void {
@@ -69,12 +58,13 @@ export class Pagamenti {
 
   private emptyForm(): PagamentoForm {
     return {
-      tipo: this.activeTab(),
-      riferimento: '',
-      descrizione: '',
+      data: '',
+      fornitore: '',
       importo: 0,
-      stato: 'Da pagare',
-      data: ''
+      descrizione: '',
+      riferimento: '',
+      stato: 'In sospeso',
+      tipo: 'Stipendi'
     };
   }
 
@@ -87,7 +77,7 @@ export class Pagamenti {
   openEditForm(pagamento: Pagamento): void {
     this.editingId.set(pagamento.id);
     const { id, ...rest } = pagamento;
-    this.form = { ...rest };
+    this.form = { ...rest, tipo: 'Stipendi' };
     this.showForm.set(true);
   }
 
@@ -96,88 +86,59 @@ export class Pagamenti {
     this.editingId.set(null);
   }
 
-  async savePagamento(): Promise<void> {
-    if (!this.form.riferimento || !this.form.descrizione) {
+  savePagamento(): void {
+    if (!this.form.fornitore || !this.form.descrizione) {
       return;
     }
 
-    try {
-      const payload = {
-        tipo: this.form.tipo,
-        riferimento: this.form.riferimento,
-        descrizione: this.form.descrizione,
-        importo: this.form.importo,
-        stato: this.form.stato,
-        data: this.form.data,
-        metodo: 'Bonifico'
-      };
+    const editingId = this.editingId();
+    const current = this.pagamenti();
 
-      const editingId = this.editingId();
-      if (editingId !== null) {
-        await firstValueFrom(this.http.patch(API_ENDPOINTS.pagamenti.byId(editingId), payload));
-      } else {
-        await firstValueFrom(this.http.post(API_ENDPOINTS.pagamenti.list, payload));
-      }
-
-      await this.loadPagamenti();
-      this.closeForm();
-    } catch {
-      // Mantiene il form aperto in caso di errore API.
-    }
-  }
-
-  async segnaComePagato(pagamento: Pagamento): Promise<void> {
-    try {
-      await firstValueFrom(this.http.patch(API_ENDPOINTS.pagamenti.markPaid(pagamento.id), {}));
-      await this.loadPagamenti();
-    } catch {
-      // Ignora errori runtime e mantiene lo stato corrente.
-    }
-  }
-
-  async deletePagamento(id: number): Promise<void> {
-    try {
-      await firstValueFrom(this.http.delete(API_ENDPOINTS.pagamenti.byId(id)));
-      await this.loadPagamenti();
-    } catch {
-      // Ignora errori runtime e mantiene lo stato corrente.
-    }
-  }
-
-  private async loadPagamenti(): Promise<void> {
-    try {
-      const response = await firstValueFrom(
-        this.http.get<{ data: Array<Record<string, unknown>> }>(API_ENDPOINTS.pagamenti.list)
-      );
-      const payload = (response as { data?: Array<Record<string, unknown>> }).data ?? [];
-      this.pagamenti.set(payload.map((item) => {
-        const source = item as Record<string, unknown>;
-        return {
-          id: Number(source['id'] ?? 0),
-          tipo: this.normalizeTipo(String(source['tipo'] ?? 'Stipendi')),
-          riferimento: String(source['riferimento'] ?? ''),
-          descrizione: String(source['descrizione'] ?? ''),
-          importo: Number(source['importo'] ?? 0),
-          stato: this.normalizeStato(String(source['stato'] ?? 'Da pagare')),
-          data: String(source['data'] ?? source['dataPagamento'] ?? '-')
+    if (editingId !== null) {
+      const index = current.findIndex((p) => p.id === editingId);
+      if (index !== -1) {
+        current[index] = { 
+          ...current[index], 
+          data: this.form.data,
+          fornitore: this.form.fornitore,
+          importo: this.form.importo,
+          descrizione: this.form.descrizione,
+          riferimento: this.form.riferimento,
+          stato: this.form.stato
         };
-      }));
-    } catch {
-      this.pagamenti.set([]);
+        this.pagamenti.set([...current]);
+      }
+    } else {
+      const newPagamento: Pagamento = {
+        id: this.nextId++,
+        data: this.form.data,
+        fornitore: this.form.fornitore,
+        importo: this.form.importo,
+        descrizione: this.form.descrizione,
+        riferimento: this.form.riferimento,
+        stato: this.form.stato
+      };
+      this.pagamenti.set([...current, newPagamento]);
+    }
+
+    this.closeForm();
+  }
+
+  segnaComePagato(pagamento: Pagamento): void {
+    const current = this.pagamenti();
+    const index = current.findIndex((p) => p.id === pagamento.id);
+    if (index !== -1) {
+      current[index].stato = 'Pagato';
+      this.pagamenti.set([...current]);
     }
   }
 
-  private normalizeTipo(value: string): TipoPagamento {
-    if (value === 'Mezzi' || value === 'Attrezzature') {
-      return value;
-    }
-    return 'Stipendi';
+  deletePagamento(id: number): void {
+    const current = this.pagamenti();
+    this.pagamenti.set(current.filter((p) => p.id !== id));
   }
 
-  private normalizeStato(value: string): StatoPagamento {
-    if (value === 'Pagato') {
-      return value;
-    }
-    return 'Da pagare';
+  private loadPagamenti(): void {
+    this.pagamenti.set(this.fakeData.getPagamenti());
   }
 }

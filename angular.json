@@ -7,7 +7,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "futureDeliveryManagement": {
+    "DeliveryManagement": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -62,10 +62,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "futureDeliveryManagement:build:production"
+              "buildTarget": "DeliveryManagement:build:production"
             },
             "development": {
-              "buildTarget": "futureDeliveryManagement:build:development"
+              "buildTarget": "DeliveryManagement:build:development"
             }
           },
           "defaultConfiguration": "development"

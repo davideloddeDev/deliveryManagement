@@ -1,7 +1,4 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Injectable, inject, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
-import { API_ENDPOINTS } from '../core/api-endpoints';
+import { Injectable, signal } from '@angular/core';
 
 const STORAGE_KEY = 'fd_auth_logged_in';
 const STORAGE_TOKEN_KEY = 'fd_auth_access_token';
@@ -21,8 +18,6 @@ interface LoginResponse {
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly http = inject(HttpClient);
-
   private readonly loggedIn = signal<boolean>(localStorage.getItem(STORAGE_KEY) === 'true');
   private readonly user = signal<UserProfile>(this.restoreUser());
 
@@ -41,7 +36,17 @@ export class AuthService {
     }
 
     try {
-      const response = await firstValueFrom(this.http.post<LoginResponse>(API_ENDPOINTS.auth.login, { email, password }));
+      // Simulated login with fake data
+      const response: LoginResponse = {
+        accessToken: 'fake-token-' + Date.now(),
+        user: {
+          nome: 'Mario',
+          cognome: 'Rossi',
+          email: email,
+          ruolo: 'Amministratore'
+        }
+      };
+      
       this.loggedIn.set(true);
       this.user.set(response.user);
       localStorage.setItem(STORAGE_KEY, 'true');
@@ -67,16 +72,17 @@ export class AuthService {
     }
 
     try {
-      const response = await firstValueFrom(
-        this.http.post<LoginResponse>(API_ENDPOINTS.auth.register, {
+      // Simulated register with fake data
+      const response: LoginResponse = {
+        accessToken: 'fake-token-' + Date.now(),
+        user: {
           nome: input.nome,
           cognome: input.cognome,
           email: input.email,
-          password: input.password,
-          licenseKey: input.licenseKey,
           ruolo: input.ruolo || 'Operatore'
-        })
-      );
+        }
+      };
+      
       this.loggedIn.set(true);
       this.user.set(response.user);
       localStorage.setItem(STORAGE_KEY, 'true');
@@ -90,16 +96,6 @@ export class AuthService {
   }
 
   logout(): void {
-    const token = this.getAccessToken();
-    if (token) {
-      void firstValueFrom(
-        this.http.post(
-          API_ENDPOINTS.auth.logout,
-          {},
-          { headers: new HttpHeaders({ Authorization: `Bearer ${token}` }) }
-        )
-      ).catch(() => undefined);
-    }
     this.clearSession();
   }
 
@@ -114,19 +110,7 @@ export class AuthService {
       return;
     }
 
-    try {
-      const profile = await firstValueFrom(
-        this.http.get<UserProfile>(API_ENDPOINTS.auth.me, {
-          headers: new HttpHeaders({ Authorization: `Bearer ${token}` })
-        })
-      );
-      this.loggedIn.set(true);
-      this.user.set(profile);
-      localStorage.setItem(STORAGE_KEY, 'true');
-      localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(profile));
-    } catch {
-      this.clearSession();
-    }
+    this.loggedIn.set(true);
   }
 
   private clearSession(): void {

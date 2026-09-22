@@ -1,9 +1,6 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
-import { AuthService } from '../../auth/auth.service';
-import { API_ENDPOINTS } from '../../core/api-endpoints';
+import { FakeDataService, LicenseKeyItem } from '../../core/fake-data.service';
 
 interface SettingItem {
   key: string;
@@ -24,17 +21,6 @@ interface LicenzaSoftware {
   tipo: string;
   scadenza: string;
   rinnovoAutomatico: boolean;
-}
-
-interface LicenseKeyItem {
-  id: number;
-  chiave: string;
-  dataInizio: string;
-  dataFine: string;
-  accountRegistrabili: number;
-  accountRegistrati: number;
-  versione: string;
-  stato: string;
 }
 
 interface CollaboratoreAccesso {
@@ -68,13 +54,12 @@ type SettingsTab = 'generale' | 'sistema' | 'licenza' | 'accessi' | 'telemetria'
   styleUrl: './impostazioni.scss'
 })
 export class Impostazioni {
-  private readonly http = inject(HttpClient);
-  private readonly authService = inject(AuthService);
+  private readonly fakeData = inject(FakeDataService);
 
   readonly companyProfile: AziendaProfile = {
-    nome: 'FutureDelivery S.r.l.',
+    nome: 'DeliveryManagement S.r.l.',
     indirizzo: 'Via Roma 18, Milano',
-    email: 'amministrazione@futuredelivery.it',
+    email: 'amministrazione@deliverymanagement.it',
     telefono: '+39 02 555 0188',
     partitaIva: 'IT12345678901'
   };
@@ -113,7 +98,7 @@ export class Impostazioni {
     { mezzoId: 2, posizione: 'Viale Europa 16, Monza', coordinate: '45.5845° N, 9.2744° E', ultimoAggiornamento: '26/08/2026 · 10:39', caricoDisponibile: '780 kg', capacitaCarico: '1.500 kg', temperatura: '6,2 °C', velocita: '0 km/h', autonomia: '412 km', statoMotore: 'In sosta' },
     { mezzoId: 3, posizione: 'Officina Nord, Milano', coordinate: '45.5156° N, 9.2198° E', ultimoAggiornamento: '26/08/2026 · 09:58', caricoDisponibile: '0 kg', capacitaCarico: '1.500 kg', temperatura: '18,4 °C', velocita: '0 km/h', autonomia: '0 km', statoMotore: 'Manutenzione' },
     { mezzoId: 4, posizione: 'Via Garibaldi 7, Sesto San Giovanni', coordinate: '45.5340° N, 9.2370° E', ultimoAggiornamento: '26/08/2026 · 10:35', caricoDisponibile: '96 kg', capacitaCarico: '650 kg', temperatura: '7,1 °C', velocita: '24 km/h', autonomia: '154 km', statoMotore: 'Acceso' },
-    { mezzoId: 5, posizione: 'Deposito FutureDelivery, Milano', coordinate: '45.4862° N, 9.2045° E', ultimoAggiornamento: '25/08/2026 · 18:12', caricoDisponibile: '0 kg', capacitaCarico: '1.500 kg', temperatura: '19,1 °C', velocita: '0 km/h', autonomia: '0 km', statoMotore: 'Fuori servizio' }
+    { mezzoId: 5, posizione: 'Deposito DeliveryManagement, Milano', coordinate: '45.4862° N, 9.2045° E', ultimoAggiornamento: '25/08/2026 · 18:12', caricoDisponibile: '0 kg', capacitaCarico: '1.500 kg', temperatura: '19,1 °C', velocita: '0 km/h', autonomia: '0 km', statoMotore: 'Fuori servizio' }
   ];
 
   readonly accessiCollaboratori = signal<CollaboratoreAccesso[]>([
@@ -129,12 +114,12 @@ export class Impostazioni {
     { key: 'sms', label: 'Notifiche SMS', description: 'Avvisi urgenti per consegne e ritardi.', enabled: false },
     { key: 'backup', label: 'Backup automatico', description: 'Salvataggio giornaliero dei dati di gestione.', enabled: true },
     { key: 'audit', label: 'Audit log', description: 'Tracciamento completo delle modifiche ai dati.', enabled: true },
-    { key: 'maintenance', label: 'Modalità manutenzione', description: 'Blocca l’accesso agli utenti non amministrativi.', enabled: false },
+    { key: 'maintenance', label: 'Modalità manutenzione', description: 'Blocca l\'accesso agli utenti non amministrativi.', enabled: false },
     { key: 'twoFactor', label: 'Autenticazione a due fattori', description: 'Protezione avanzata per il login amministrativo.', enabled: true }
   ]);
 
   constructor() {
-    void this.loadLicenseData();
+    this.loadLicenseData();
   }
 
   get enabledSettings(): number {
@@ -183,11 +168,11 @@ export class Impostazioni {
   }
 
   get accountRegistrati(): number {
-    return this.licenzaPrimaria?.accountRegistrati || 0;
+    return this.licenzaPrimaria?.dispositivi || 0;
   }
 
   get accountRegistrabili(): number {
-    return this.licenzaPrimaria?.accountRegistrabili || 0;
+    return this.licenzaPrimaria?.dispositivi || 0;
   }
 
   get versioneLicenza(): string {
@@ -232,50 +217,7 @@ export class Impostazioni {
     return new Date(anno, mese - 1, giorno);
   }
 
-  private async loadLicenseData(): Promise<void> {
-    try {
-      const licensesResponse = await firstValueFrom(
-        this.http.get<{ data: LicenseKeyItem[] }>(API_ENDPOINTS.licenseKeys.list)
-      );
-      this.licenseKeys.set(licensesResponse.data || []);
-    } catch {
-      this.licenseKeys.set([]);
-    }
-
-    const headers = this.buildAuthHeaders();
-    if (!headers) {
-      return;
-    }
-
-    try {
-      const licenseSettings = await firstValueFrom(
-        this.http.get<{ tipo: string; scadenza: string; rinnovoAutomatico: boolean }>(
-          API_ENDPOINTS.settings.license,
-          { headers }
-        )
-      );
-
-      this.licenza.tipo = licenseSettings.tipo;
-      this.licenza.scadenza = this.formatDate(licenseSettings.scadenza);
-      this.licenza.rinnovoAutomatico = Boolean(licenseSettings.rinnovoAutomatico);
-    } catch {
-      // Mantiene i dati correnti se il backend non risponde.
-    }
-  }
-
-  private buildAuthHeaders(): HttpHeaders | null {
-    const token = this.authService.getAccessToken();
-    if (!token) {
-      return null;
-    }
-    return new HttpHeaders({ Authorization: `Bearer ${token}` });
-  }
-
-  private formatDate(input: string): string {
-    const date = new Date(input);
-    if (Number.isNaN(date.getTime())) {
-      return input;
-    }
-    return date.toLocaleDateString('it-IT');
+  private loadLicenseData(): void {
+    this.licenseKeys.set(this.fakeData.getLicenseKeys());
   }
 }

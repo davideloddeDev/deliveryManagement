@@ -1,40 +1,27 @@
-import { HttpClient } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
-import { API_ENDPOINTS } from '../../core/api-endpoints';
+import { FakeDataService, Mezzo } from '../../core/fake-data.service';
 
-type StatoMezzo = 'Attivo' | 'In manutenzione' | 'Fuori servizio';
+type StatoMezzo = 'Attivo' | 'In manutenzione' | 'Inattivo' | 'Fuori servizio';
 type StatoAssicurazione = 'Valida' | 'In scadenza' | 'Scaduta';
-
-interface Mezzo {
-  id: number;
-  targa: string;
-  modello: string;
-  tipo: string;
-  stato: StatoMezzo;
-  km: number;
-  ultimaManutenzione: string;
-  compagniaAssicurativa: string;
-  numeroPolizza: string;
-  scadenzaAssicurazione: string;
-  pagamentoAssicurazioneAutorizzato: boolean;
-}
 
 type MezzoForm = Omit<Mezzo, 'id'>;
 
 const EMPTY_FORM: MezzoForm = {
   targa: '',
+  marca: '',
   modello: '',
+  anno: new Date().getFullYear(),
   tipo: 'Furgone',
   stato: 'Attivo',
+  kilometraggio: 0,
   km: 0,
   ultimaManutenzione: '',
   compagniaAssicurativa: '',
   numeroPolizza: '',
-  scadenzaAssicurazione: '',
-  pagamentoAssicurazioneAutorizzato: false
+  pagamentoAssicurazioneAutorizzato: false,
+  scadenzaAssicurazione: ''
 };
 
 @Component({
@@ -45,19 +32,20 @@ const EMPTY_FORM: MezzoForm = {
   styleUrl: './mezzi.scss'
 })
 export class Mezzi {
-  private readonly http = inject(HttpClient);
+  private readonly fakeData = inject(FakeDataService);
+  private nextId = 100;
 
   readonly mezzi = signal<Mezzo[]>([]);
 
   readonly tipiMezzo = ['Furgone', 'Mezzo leggero', 'Camion', 'Moto'];
-  readonly statiMezzo: StatoMezzo[] = ['Attivo', 'In manutenzione', 'Fuori servizio'];
+  readonly statiMezzo: StatoMezzo[] = ['Attivo', 'In manutenzione', 'Inattivo'];
 
   readonly showForm = signal(false);
   readonly editingId = signal<number | null>(null);
   form: MezzoForm = { ...EMPTY_FORM };
 
   constructor() {
-    void this.loadMezzi();
+    this.loadMezzi();
   }
 
   get totale(): number {
@@ -70,6 +58,10 @@ export class Mezzi {
 
   get inManutenzione(): number {
     return this.mezzi().filter((m) => m.stato === 'In manutenzione').length;
+  }
+
+  get inattivi(): number {
+    return this.mezzi().filter((m) => m.stato === 'Inattivo').length;
   }
 
   get fuoriServizio(): number {
@@ -100,23 +92,23 @@ export class Mezzi {
   }
 
   private parseData(data: string): Date | null {
-    const parti = data.split('/');
+    const parti = data.split('-');
     if (parti.length !== 3) {
       return null;
     }
-    const [giorno, mese, anno] = parti.map(Number);
+    const [anno, mese, giorno] = parti.map(Number);
     if (!giorno || !mese || !anno) {
       return null;
     }
     return new Date(anno, mese - 1, giorno);
   }
 
-  async autorizzaPagamentoAssicurazione(mezzo: Mezzo): Promise<void> {
-    try {
-      await firstValueFrom(this.http.post(API_ENDPOINTS.mezzi.authorizeInsurancePayment(mezzo.id), {}));
-      await this.loadMezzi();
-    } catch {
-      // Ignora errori runtime e mantiene lo stato corrente.
+  autorizzaPagamentoAssicurazione(mezzo: Mezzo): void {
+    const current = this.mezzi();
+    const index = current.findIndex((m) => m.id === mezzo.id);
+    if (index !== -1) {
+      current[index] = { ...current[index], pagamentoAssicurazioneAutorizzato: true };
+      this.mezzi.set([...current]);
     }
   }
 
@@ -138,80 +130,37 @@ export class Mezzi {
     this.editingId.set(null);
   }
 
-  async saveMezzo(): Promise<void> {
+  saveMezzo(): void {
     if (!this.form.targa || !this.form.modello) {
       return;
     }
 
-    try {
-      const payload = {
-        targa: this.form.targa,
-        modello: this.form.modello,
-        tipo: this.form.tipo,
-        stato: this.form.stato,
-        km: this.form.km,
-        ultimaManutenzione: this.form.ultimaManutenzione,
-        compagniaAssicurativa: this.form.compagniaAssicurativa,
-        numeroPolizza: this.form.numeroPolizza,
-        scadenzaAssicurazione: this.form.scadenzaAssicurazione,
-        pagamentoAssicurazioneAutorizzato: this.form.pagamentoAssicurazioneAutorizzato
-      };
+    const editingId = this.editingId();
+    const current = this.mezzi();
 
-      const editingId = this.editingId();
-      if (editingId !== null) {
-        await firstValueFrom(this.http.patch(API_ENDPOINTS.mezzi.byId(editingId), payload));
-      } else {
-        await firstValueFrom(this.http.post(API_ENDPOINTS.mezzi.list, payload));
+    if (editingId !== null) {
+      const index = current.findIndex((m) => m.id === editingId);
+      if (index !== -1) {
+        current[index] = { ...current[index], ...this.form };
+        this.mezzi.set([...current]);
       }
-
-      await this.loadMezzi();
-      this.closeForm();
-    } catch {
-      // Mantiene il form aperto in caso di errore API.
+    } else {
+      const newMezzo: Mezzo = {
+        id: this.nextId++,
+        ...this.form
+      };
+      this.mezzi.set([...current, newMezzo]);
     }
+
+    this.closeForm();
   }
 
-  async deleteMezzo(id: number): Promise<void> {
-    try {
-      await firstValueFrom(this.http.delete(API_ENDPOINTS.mezzi.byId(id)));
-      await this.loadMezzi();
-    } catch {
-      // Ignora errori runtime e mantiene lo stato corrente.
-    }
+  deleteMezzo(id: number): void {
+    const current = this.mezzi();
+    this.mezzi.set(current.filter((m) => m.id !== id));
   }
 
-  private async loadMezzi(): Promise<void> {
-    try {
-      const response = await firstValueFrom(
-        this.http.get<{ data: Array<Record<string, unknown>> }>(API_ENDPOINTS.mezzi.list)
-      );
-
-      const payload = (response as { data?: Array<Record<string, unknown>> }).data ?? [];
-      this.mezzi.set(payload.map((item) => {
-        const source = item as Record<string, unknown>;
-        return {
-          id: Number(source['id'] ?? 0),
-          targa: String(source['targa'] ?? ''),
-          modello: String(source['modello'] ?? ''),
-          tipo: String(source['tipo'] ?? 'Furgone'),
-          stato: this.normalizeStato(String(source['stato'] ?? 'Attivo')),
-          km: Number(source['km'] ?? 0),
-          ultimaManutenzione: String(source['ultimaManutenzione'] ?? ''),
-          compagniaAssicurativa: String(source['compagniaAssicurativa'] ?? ''),
-          numeroPolizza: String(source['numeroPolizza'] ?? ''),
-          scadenzaAssicurazione: String(source['scadenzaAssicurazione'] ?? ''),
-          pagamentoAssicurazioneAutorizzato: Boolean(source['pagamentoAssicurazioneAutorizzato'])
-        };
-      }));
-    } catch {
-      this.mezzi.set([]);
-    }
-  }
-
-  private normalizeStato(value: string): StatoMezzo {
-    if (value === 'In manutenzione' || value === 'Fuori servizio') {
-      return value;
-    }
-    return 'Attivo';
+  private loadMezzi(): void {
+    this.mezzi.set(this.fakeData.getMezzi());
   }
 }

@@ -1,25 +1,9 @@
-import { HttpClient } from '@angular/common/http';
 import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
-import { ApiFeedbackService } from '../../core/api-feedback.service';
-import { API_ENDPOINTS, POLLING_CONFIG } from '../../core/api-endpoints';
+import { FakeDataService, Consegna } from '../../core/fake-data.service';
 
 type StatoConsegna = 'In attesa' | 'In transito' | 'Consegnato' | 'Annullata';
-
-interface Consegna {
-  id: number;
-  codice: string;
-  cliente: string;
-  indirizzo: string;
-  targaMezzo: string;
-  autista: string;
-  stato: StatoConsegna;
-  dataConsegna: string;
-  importo: number;
-}
-
 type ConsegnaForm = Omit<Consegna, 'id'>;
 
 const EMPTY_FORM: ConsegnaForm = {
@@ -41,10 +25,10 @@ const EMPTY_FORM: ConsegnaForm = {
   styleUrl: './consegne.scss'
 })
 export class Consegne implements OnDestroy {
-  private readonly http = inject(HttpClient);
-  private readonly feedback = inject(ApiFeedbackService);
-  private readonly refreshMs = POLLING_CONFIG.consegneMs;
+  private readonly fakeData = inject(FakeDataService);
+  private readonly refreshMs = 30000;
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
+  private nextId = 100;
 
   readonly consegne = signal<Consegna[]>([]);
 
@@ -56,9 +40,9 @@ export class Consegne implements OnDestroy {
   form: ConsegnaForm = { ...EMPTY_FORM };
 
   constructor() {
-    void this.loadConsegne();
+    this.loadConsegne();
     this.refreshTimer = setInterval(() => {
-      void this.loadConsegne();
+      this.loadConsegne();
     }, this.refreshMs);
   }
 
@@ -116,87 +100,37 @@ export class Consegne implements OnDestroy {
     this.editingId.set(null);
   }
 
-  async saveConsegna(): Promise<void> {
+  saveConsegna(): void {
     if (!this.form.codice || !this.form.cliente) {
       return;
     }
 
-    try {
-      const payload = {
-        codice: this.form.codice,
-        cliente: this.form.cliente,
-        indirizzo: this.form.indirizzo,
-        targaMezzo: this.form.targaMezzo,
-        autista: this.form.autista,
-        stato: this.form.stato,
-        dataConsegna: this.form.dataConsegna,
-        importo: this.form.importo
-      };
+    const editingId = this.editingId();
+    const current = this.consegne();
 
-      const editingId = this.editingId();
-      if (editingId !== null) {
-        await firstValueFrom(
-          this.http.patch(API_ENDPOINTS.consegne.byId(editingId), payload)
-        );
-        this.feedback.setSuccess('Consegna aggiornata con successo');
-      } else {
-        await firstValueFrom(this.http.post(API_ENDPOINTS.consegne.list, payload));
-        this.feedback.setSuccess('Consegna creata con successo');
+    if (editingId !== null) {
+      const index = current.findIndex((c) => c.id === editingId);
+      if (index !== -1) {
+        current[index] = { ...current[index], ...this.form };
+        this.consegne.set([...current]);
       }
-
-      await this.loadConsegne();
-      this.closeForm();
-    } catch {
-      // Mantiene il form aperto in caso di errore API.
+    } else {
+      const newConsegna: Consegna = {
+        id: this.nextId++,
+        ...this.form
+      };
+      this.consegne.set([...current, newConsegna]);
     }
+
+    this.closeForm();
   }
 
-  async deleteConsegna(id: number): Promise<void> {
-    try {
-      await firstValueFrom(this.http.delete(API_ENDPOINTS.consegne.byId(id)));
-      this.feedback.setSuccess('Consegna eliminata con successo');
-      await this.loadConsegne();
-    } catch {
-      // Ignora errori runtime e mantiene lo stato corrente.
-    }
+  deleteConsegna(id: number): void {
+    const current = this.consegne();
+    this.consegne.set(current.filter((c) => c.id !== id));
   }
 
-  private async loadConsegne(): Promise<void> {
-    try {
-      const response = await firstValueFrom(
-        this.http.get<{ data: Array<Record<string, unknown>> }>(API_ENDPOINTS.consegne.list)
-      );
-      const payload = (response as { data?: Array<Record<string, unknown>> }).data ?? [];
-      this.consegne.set(payload.map((item) => this.fromApi(item)));
-    } catch {
-      this.consegne.set([]);
-    }
-  }
-
-  private fromApi(item: Record<string, unknown>): Consegna {
-    const source = item as Record<string, unknown>;
-    const id = Number(source['id'] ?? 0);
-    const codice = String(source['codice'] ?? `#FD-${id}`);
-    const mezzoId = source['mezzoId'] ? String(source['mezzoId']) : '';
-    const autistaId = source['autistaId'] ? String(source['autistaId']) : '';
-
-    return {
-      id,
-      codice,
-      cliente: String(source['cliente'] ?? ''),
-      indirizzo: String(source['indirizzo'] ?? ''),
-      targaMezzo: String(source['targaMezzo'] ?? (mezzoId ? `Mezzo ${mezzoId}` : '')),
-      autista: String(source['autista'] ?? (autistaId ? `Autista ${autistaId}` : '')),
-      stato: this.normalizeStatus(String(source['stato'] ?? 'In attesa')),
-      dataConsegna: String(source['dataConsegna'] ?? source['updatedAt'] ?? '-'),
-      importo: Number(source['importo'] ?? 0)
-    };
-  }
-
-  private normalizeStatus(stato: string): StatoConsegna {
-    if (stato === 'In transito' || stato === 'Consegnato' || stato === 'Annullata') {
-      return stato;
-    }
-    return 'In attesa';
+  private loadConsegne(): void {
+    this.consegne.set(this.fakeData.getConsegne());
   }
 }
