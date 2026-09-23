@@ -1,59 +1,44 @@
-# DeliveryManagement
+# 🚚 DeliveryManagement
 
-This project was generated using Angular CLI version 21.2.9.
+Una piattaforma intuitiva e completa per gestire in modo efficiente le consegne, i collaboratori, i mezzi di trasporto e le operazioni finanziarie della tua azienda di logistica.
 
-## Development server
+## ✨ Caratteristiche Principali
 
-To start a local development server, run:
+- **Dashboard Interattiva**: Visualizza istantaneamente i dati chiave e il riepilogo delle operazioni
+- **Gestione Consegne**: Traccia e monitora tutte le consegne in tempo reale
+- **Amministrazione Collaboratori**: Gestisci il team con assegnazione dei ruoli e responsabilità
+- **Gestione Flotta**: Monitora e mantieni tutti i mezzi di trasporto
+- **Pagamenti**: Registra e traccia i pagamenti in modo semplice e sicuro
+- **Entrate**: Visualizza i dati finanziari e le entrate generate
+- **Impostazioni Personalizzate**: Configura l'applicazione secondo le tue esigenze
+- **Autenticazione Sicura**: Accesso protetto con registrazione utente
 
-```bash
-ng serve
-```
+## 🚀 Primi Passi
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+### Accesso all'Applicazione
 
-## Code scaffolding
+1. Apri l'applicazione nel tuo browser web
+2. Se non hai ancora un account, fai clic su **"Registrati"** e compila il form
+3. Effettua l'accesso con le tue credenziali
+4. Una volta autenticato, accedi alla dashboard principale
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+### Navigazione
 
-```bash
-ng generate component component-name
-```
+Una volta dentro l'applicazione, puoi accedere facilmente alle diverse sezioni:
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+- **Dashboard**: Panoramica generale dello stato operativo
+- **Consegne**: Crea, modifica e traccia le consegne
+- **Collaboratori**: Visualizza e gestisci il tuo team
+- **Mezzi**: Monitora la flotta di veicoli
+- **Pagamenti**: Gestisci transazioni e incassi
+- **Entrate**: Analizza i dati finanziari
+- **Impostazioni**: Personalizza le preferenze del tuo account
 
-```bash
-ng generate --help
-```
+## 📋 Requisiti
 
-## Building
+- Browser web moderno (Chrome, Firefox, Safari, Edge)
+- Connessione Internet stabile
 
-To build the project run:
+## 🆘 Supporto
 
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Hai domande o incontri problemi? Contatta il team di supporto tramite l'area dedicata all'interno dell'applicazione.
